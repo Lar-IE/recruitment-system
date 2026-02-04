@@ -10,7 +10,13 @@ class ApplicationStatus extends Model
         'application_id',
         'status',
         'note',
+        'interview_at',
+        'interview_link',
         'set_by',
+    ];
+
+    protected $casts = [
+        'interview_at' => 'datetime',
     ];
 
     public function application()

@@ -31,17 +31,25 @@
                                         <span class="text-xs text-gray-500">{{ $notification->created_at?->format('M d, Y H:i') }}</span>
                                     </div>
 
-                                    <p class="mt-2 text-sm text-gray-700">
-                                        {{ __('Status: :status', ['status' => Str::of($data['status'] ?? '')->replace('_', ' ')->title()]) }}
-                                    </p>
-
-                                    @if (! empty($data['note']))
-                                        <p class="mt-2 text-sm text-gray-600">{{ $data['note'] }}</p>
+                                    @if (($data['type'] ?? '') === 'document_update_requested')
+                                        <p class="mt-2 text-sm text-gray-700">
+                                            {{ __('Document update requested: :type', ['type' => Str::of($data['document_type'] ?? '')->replace('_', ' ')->title()]) }}
+                                        </p>
+                                        @if (! empty($data['remarks']))
+                                            <p class="mt-2 text-sm text-gray-600">{{ $data['remarks'] }}</p>
+                                        @endif
+                                    @else
+                                        <p class="mt-2 text-sm text-gray-700">
+                                            {{ __('Status: :status', ['status' => Str::of($data['status'] ?? '')->replace('_', ' ')->title()]) }}
+                                        </p>
+                                        @if (! empty($data['note']))
+                                            <p class="mt-2 text-sm text-gray-600">{{ $data['note'] }}</p>
+                                        @endif
                                     @endif
 
                                     <div class="mt-3">
                                         <a href="{{ route('jobseeker.notifications.read', $notification->id) }}" class="text-sm text-indigo-600 hover:text-indigo-900">
-                                            {{ __('View Application') }}
+                                            {{ ($data['type'] ?? '') === 'document_update_requested' ? __('View Documents') : __('View Application') }}
                                         </a>
                                     </div>
                                 </div>

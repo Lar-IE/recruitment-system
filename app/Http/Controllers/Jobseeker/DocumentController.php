@@ -112,6 +112,7 @@ class DocumentController extends Controller
             ->first();
 
         $previousStatus = $document?->status;
+        $previousRemarks = $document?->remarks;
         $path = $file->store("documents/{$jobseekerId}", 'public');
 
         if ($document) {
@@ -135,7 +136,7 @@ class DocumentController extends Controller
             ]);
         }
 
-        if ($previousStatus === 'rejected') {
+        if ($previousStatus === 'rejected' || ! empty($previousRemarks)) {
             $this->notifyEmployersDocumentUpdated($jobseekerId, $type);
         }
     }

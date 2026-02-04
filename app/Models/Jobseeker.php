@@ -13,12 +13,17 @@ class Jobseeker extends Model
         'user_id',
         'phone',
         'address',
+        'barangay',
         'city',
         'province',
+        'region',
         'country',
         'birth_date',
         'gender',
         'bio',
+        'education',
+        'experience',
+        'skills',
         'status',
     ];
 
@@ -44,5 +49,15 @@ class Jobseeker extends Model
     public function digitalIds()
     {
         return $this->hasMany(DigitalId::class);
+    }
+
+    public function educations()
+    {
+        return $this->hasMany(JobseekerEducation::class)->orderBy('order');
+    }
+
+    public function workExperiences()
+    {
+        return $this->hasMany(JobseekerWorkExperience::class)->orderBy('order');
     }
 }

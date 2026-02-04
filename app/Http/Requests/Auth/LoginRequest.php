@@ -37,19 +37,39 @@ class LoginRequest extends FormRequest
      *
      * @throws \Illuminate\Validation\ValidationException
      */
-    public function authenticate(): void
+    public function authenticate(): string
     {
         $this->ensureIsNotRateLimited();
 
-        if (! Auth::attempt($this->only('email', 'password'), $this->boolean('remember'))) {
-            RateLimiter::hit($this->throttleKey());
+        if (Auth::attempt($this->only('email', 'password'), $this->boolean('remember'))) {
+            RateLimiter::clear($this->throttleKey());
 
-            throw ValidationException::withMessages([
-                'email' => trans('auth.failed'),
-            ]);
+            return 'web';
         }
 
-        RateLimiter::clear($this->throttleKey());
+        if (Auth::guard('employer_sub_user')->attempt($this->only('email', 'password'), $this->boolean('remember'))) {
+            $subUser = Auth::guard('employer_sub_user')->user();
+            $employer = $subUser?->employer;
+
+            if (! $subUser || $subUser->status !== 'active' || ! $employer || $employer->status !== 'approved') {
+                Auth::guard('employer_sub_user')->logout();
+                RateLimiter::hit($this->throttleKey());
+
+                throw ValidationException::withMessages([
+                    'email' => __('Your account is inactive or not approved.'),
+                ]);
+            }
+
+            RateLimiter::clear($this->throttleKey());
+
+            return 'employer_sub_user';
+        }
+
+        RateLimiter::hit($this->throttleKey());
+
+        throw ValidationException::withMessages([
+            'email' => trans('auth.failed'),
+        ]);
     }
 
     /**

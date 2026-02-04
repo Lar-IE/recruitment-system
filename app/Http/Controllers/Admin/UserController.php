@@ -5,8 +5,10 @@ namespace App\Http\Controllers\Admin;
 use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Notifications\AdminPasswordReset;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class UserController extends Controller
@@ -46,5 +48,21 @@ class UserController extends Controller
 
         return redirect()->route('admin.users')
             ->with('success', __('User role updated.'));
+    }
+
+    public function resetPassword(Request $request, User $user): RedirectResponse
+    {
+        $temporaryPassword = Str::random(12);
+
+        $user->update([
+            'password' => $temporaryPassword,
+        ]);
+
+        $user->notify(new AdminPasswordReset($temporaryPassword));
+
+        return redirect()->route('admin.users')
+            ->with('success', __('Password reset email sent to :email.', [
+                'email' => $user->email,
+            ]));
     }
 }

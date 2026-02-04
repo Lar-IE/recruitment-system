@@ -6,6 +6,7 @@ use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Models\Employer;
 use App\Models\Jobseeker;
+use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
@@ -40,6 +41,15 @@ class RegisteredUserController extends Controller
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
 
+        if ($request->role === UserRole::Employer->value) {
+            $allowEmployer = Setting::getValue('allow_employer_registration', '0') === '1';
+            if (! $allowEmployer) {
+                return back()
+                    ->withInput()
+                    ->withErrors(['role' => __('Employer registration is currently disabled.')]);
+            }
+        }
+
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
@@ -63,6 +73,12 @@ class RegisteredUserController extends Controller
         event(new Registered($user));
 
         Auth::login($user);
+
+        // Redirect jobseekers to profile edit page to complete their profile
+        if ($user->role === UserRole::Jobseeker) {
+            return redirect(route('jobseeker.profile.edit', absolute: false))
+                ->with('success', __('Welcome! Please complete your profile to get started.'));
+        }
 
         return redirect(route('dashboard', absolute: false));
     }

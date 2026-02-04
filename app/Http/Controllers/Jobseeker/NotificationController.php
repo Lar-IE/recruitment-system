@@ -43,9 +43,14 @@ class NotificationController extends Controller
         $notification->markAsRead();
 
         $applicationId = $notification->data['application_id'] ?? null;
+        $docType = $notification->data['document_type'] ?? null;
 
         if ($applicationId) {
             return redirect()->route('jobseeker.history.show', [$applicationId, 'from' => 'notifications']);
+        }
+
+        if ($docType) {
+            return redirect()->route('jobseeker.documents');
         }
 
         return redirect()->route('jobseeker.notifications');

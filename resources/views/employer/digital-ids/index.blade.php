@@ -16,20 +16,26 @@
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-6 text-gray-900 space-y-6">
                     <h3 class="text-lg font-semibold">{{ __('Issue Digital ID') }}</h3>
-                    <form method="POST" action="{{ route('employer.digital-ids.store') }}" class="space-y-4" x-data>
+                    @php
+                        $hiredApplicantsData = $hiredApplications->map(function ($application) {
+                            return [
+                                'id' => $application->jobseeker_id,
+                                'job_post_id' => $application->job_post_id,
+                                'name' => $application->jobseeker->user->name ?? 'N/A',
+                                'job' => $application->jobPost->title ?? 'Job',
+                            ];
+                        })->values();
+                    @endphp
+                    <form method="POST" action="{{ route('employer.digital-ids.store') }}" class="space-y-4" x-data="digitalIdIssuer">
                         @csrf
                         <div>
                             <x-input-label for="jobseeker_id" :value="__('Hired Applicant')" />
-                            <select id="jobseeker_id" name="jobseeker_id" class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm" required x-on:change="document.getElementById('job_post_id').value = $event.target.selectedOptions[0].dataset.job">
-                                <option value="" disabled selected>{{ __('Select applicant') }}</option>
-                                @foreach ($hiredApplications as $application)
-                                    <option value="{{ $application->jobseeker_id }}" data-job="{{ $application->job_post_id }}">
-                                        {{ $application->jobseeker->user->name ?? __('N/A') }} - {{ $application->jobPost->title ?? __('Job') }}
-                                    </option>
-                                @endforeach
-                            </select>
+                            <button type="button" class="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-left text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500" x-on:click.prevent="$dispatch('open-modal', 'select-hired-applicant')">
+                                <span x-text="selectedLabel || '{{ __('Select applicant') }}'"></span>
+                            </button>
                             <x-input-error :messages="$errors->get('jobseeker_id')" class="mt-2" />
-                            <input type="hidden" name="job_post_id" id="job_post_id" value="">
+                            <input type="hidden" name="jobseeker_id" x-bind:value="selectedJobseekerId">
+                            <input type="hidden" name="job_post_id" x-bind:value="selectedJobPostId">
                         </div>
 
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -58,7 +64,75 @@
                         <div class="flex items-center justify-end">
                             <x-primary-button>{{ __('Issue ID') }}</x-primary-button>
                         </div>
+
+                        <x-modal name="select-hired-applicant" maxWidth="2xl">
+                            <div class="p-6 space-y-4">
+                                <div class="flex items-center justify-between">
+                                    <h4 class="text-lg font-semibold text-gray-900">{{ __('Select Hired Applicant') }}</h4>
+                                    <button type="button" class="text-sm text-gray-500 hover:text-gray-700" x-on:click="$dispatch('close-modal', 'select-hired-applicant')">
+                                        {{ __('Close') }}
+                                    </button>
+                                </div>
+                                <div>
+                                    <x-input-label for="applicant_search" :value="__('Search')" />
+                                    <x-text-input id="applicant_search" type="text" class="mt-1 block w-full" placeholder="{{ __('Search by name or job title') }}" x-model.debounce.300ms="search" />
+                                </div>
+                                <div class="max-h-80 overflow-y-auto border rounded-lg divide-y">
+                                    <template x-for="app in filteredApplicants" :key="`${app.id}-${app.job_post_id}`">
+                                        <button type="button" class="w-full text-left px-4 py-3 hover:bg-gray-50" x-on:click="selectApplicant(app)">
+                                            <p class="font-semibold text-gray-800" x-text="app.name"></p>
+                                            <p class="text-xs text-gray-500" x-text="app.job"></p>
+                                        </button>
+                                    </template>
+                                    <div class="px-4 py-3 text-sm text-gray-500" x-show="filteredApplicants.length === 0">
+                                        {{ __('No applicants found.') }}
+                                    </div>
+                                </div>
+                            </div>
+                        </x-modal>
                     </form>
+                    <script>
+                        window.digitalIdIssuerData = {
+                            hiredApplicants: @json($hiredApplicantsData),
+                            selectedJobseekerId: @js(old('jobseeker_id')),
+                            selectedJobPostId: @js(old('job_post_id')),
+                        };
+
+                        document.addEventListener('alpine:init', () => {
+                            Alpine.data('digitalIdIssuer', () => ({
+                                search: '',
+                                hiredApplicants: window.digitalIdIssuerData?.hiredApplicants ?? [],
+                                selectedJobseekerId: window.digitalIdIssuerData?.selectedJobseekerId ?? '',
+                                selectedJobPostId: window.digitalIdIssuerData?.selectedJobPostId ?? '',
+                                selectedLabel: '',
+                                get filteredApplicants() {
+                                    if (!this.search) {
+                                        return this.hiredApplicants;
+                                    }
+                                    const query = this.search.toLowerCase();
+                                    return this.hiredApplicants.filter(app =>
+                                        app.name.toLowerCase().includes(query) || app.job.toLowerCase().includes(query)
+                                    );
+                                },
+                                init() {
+                                    if (this.selectedJobseekerId) {
+                                        const selected = this.hiredApplicants.find(app => String(app.id) === String(this.selectedJobseekerId));
+                                        if (selected) {
+                                            this.selectedLabel = `${selected.name} - ${selected.job}`;
+                                            this.selectedJobPostId = selected.job_post_id;
+                                        }
+                                    }
+                                },
+                                selectApplicant(app) {
+                                    this.selectedJobseekerId = app.id;
+                                    this.selectedJobPostId = app.job_post_id;
+                                    this.selectedLabel = `${app.name} - ${app.job}`;
+                                    this.search = '';
+                                    this.$dispatch('close-modal', 'select-hired-applicant');
+                                },
+                            }));
+                        });
+                    </script>
                 </div>
             </div>
 

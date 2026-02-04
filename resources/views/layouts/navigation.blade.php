@@ -6,11 +6,17 @@
                 <!-- Logo -->
                 <div class="shrink-0 flex items-center">
                     <a href="{{ route('dashboard') }}">
-                        <x-application-logo class="block h-9 w-auto fill-current text-gray-800" />
+                        <img src="{{ asset('assets/images/sfi_tagline_main.png') }}" alt="{{ config('app.name') }}" class="block h-9 w-auto">
                     </a>
                 </div>
 
-                @php($role = Auth::user()->role?->value)
+                @php
+                    $user = Auth::user();
+                    $isEmployerOwner = $user instanceof \App\Models\User && $user->role?->value === 'employer';
+                    $isEmployerSubUser = $user instanceof \App\Models\EmployerSubUser;
+                    $employerSubRole = $isEmployerSubUser ? $user->role?->value : null;
+                    $role = $user?->role?->value;
+                @endphp
                 <!-- Navigation Links -->
                 <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
                     @if ($role === 'admin')
@@ -44,7 +50,7 @@
                         <x-nav-link :href="route('admin.settings')" :active="request()->routeIs('admin.settings')">
                             {{ __('Settings') }}
                         </x-nav-link>
-                    @elseif ($role === 'employer')
+                    @elseif ($isEmployerOwner || $isEmployerSubUser)
                         <x-nav-link :href="route('employer.dashboard')" :active="request()->routeIs('employer.dashboard')">
                             {{ __('Home') }}
                         </x-nav-link>
@@ -54,20 +60,17 @@
                         <x-nav-link :href="route('employer.applicants')" :active="request()->routeIs('employer.applicants')">
                             {{ __('Applicants') }}
                         </x-nav-link>
-                        <x-nav-link :href="route('employer.ats')" :active="request()->routeIs('employer.ats')">
-                            {{ __('Applicant Tracking') }}
-                        </x-nav-link>
-                        <x-nav-link :href="route('employer.notifications')" :active="request()->routeIs('employer.notifications')">
-                            {{ __('Notifications') }}
-                            @if (Auth::user()->unreadNotifications()->count())
-                                <span class="ml-1 inline-flex items-center rounded-full bg-red-500 px-2 py-0.5 text-xs font-semibold text-white">
-                                    {{ Auth::user()->unreadNotifications()->count() }}
-                                </span>
-                            @endif
+                        <x-nav-link :href="route('employer.jobseekers.index')" :active="request()->routeIs('employer.jobseekers.*')">
+                            {{ __('Jobseeker Directory') }}
                         </x-nav-link>
                         <x-nav-link :href="route('employer.digital-ids')" :active="request()->routeIs('employer.digital-ids')">
                             {{ __('Digital IDs') }}
                         </x-nav-link>
+                        @if ($isEmployerOwner || $employerSubRole === 'admin')
+                            <x-nav-link :href="route('employer.sub-users.index')" :active="request()->routeIs('employer.sub-users.*')">
+                                {{ __('Sub-Users') }}
+                            </x-nav-link>
+                        @endif
                     @else
                         <x-nav-link :href="route('jobseeker.dashboard')" :active="request()->routeIs('jobseeker.dashboard')">
                             {{ __('Home') }}
@@ -84,20 +87,81 @@
                         <x-nav-link :href="route('jobseeker.history')" :active="request()->routeIs('jobseeker.history')">
                             {{ __('History') }}
                         </x-nav-link>
-                        <x-nav-link :href="route('jobseeker.notifications')" :active="request()->routeIs('jobseeker.notifications')">
-                            {{ __('Notifications') }}
-                            @if (Auth::user()->unreadNotifications()->count())
-                                <span class="ml-1 inline-flex items-center rounded-full bg-red-500 px-2 py-0.5 text-xs font-semibold text-white">
-                                    {{ Auth::user()->unreadNotifications()->count() }}
-                                </span>
-                            @endif
-                        </x-nav-link>
                     @endif
                 </div>
             </div>
 
-            <!-- Settings Dropdown -->
-            <div class="hidden sm:flex sm:items-center sm:ms-6">
+            <!-- Notifications + Settings -->
+            <div class="hidden sm:flex sm:items-center sm:ms-6 space-x-3">
+                @php
+                    $notificationRoute = null;
+                    if ($role === 'employer') {
+                        $notificationRoute = 'employer.notifications.read';
+                    } elseif ($role === 'jobseeker') {
+                        $notificationRoute = 'jobseeker.notifications.read';
+                    }
+
+                    $profileRoute = $role === 'jobseeker'
+                        ? 'jobseeker.profile.show'
+                        : 'profile.edit';
+
+                    $unreadCount = 0;
+                    $recentNotifications = collect();
+                    if ($notificationRoute && \Illuminate\Support\Facades\Schema::hasTable('notifications')) {
+                        $unreadCount = Auth::user()->unreadNotifications()->count();
+                        $recentNotifications = Auth::user()->notifications()->latest()->take(5)->get();
+                    }
+                @endphp
+
+                @if ($notificationRoute)
+                    <div x-data="{ openNotif: false }" class="relative">
+                        <button type="button" class="relative inline-flex items-center justify-center w-9 h-9 rounded-full hover:bg-gray-100" x-on:click="openNotif = !openNotif">
+                            <svg class="h-5 w-5 text-gray-600" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 01-5.714 0c-1.009-.117-1.8-.9-1.928-1.913a17.716 17.716 0 01-.114-2.082c0-2.197.716-4.356 2.064-6.152A6.002 6.002 0 0112 3c1.6 0 3.125.63 4.236 1.76 1.348 1.796 2.064 3.955 2.064 6.152 0 .7-.038 1.401-.114 2.082-.128 1.013-.92 1.796-1.929 1.913z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 17.75a2.25 2.25 0 004.5 0"/>
+                            </svg>
+                            @if ($unreadCount)
+                                <span class="absolute -top-0.5 -right-0.5 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-semibold text-white">
+                                    {{ $unreadCount }}
+                                </span>
+                            @endif
+                        </button>
+                        <div x-show="openNotif" x-cloak class="absolute right-0 mt-2 w-80 rounded-md border bg-white shadow-lg z-50">
+                            <div class="p-3 border-b text-sm font-semibold text-gray-700">{{ __('Notifications') }}</div>
+                            <div class="max-h-72 overflow-y-auto">
+                                @if ($recentNotifications->isEmpty())
+                                    <div class="p-4 text-sm text-gray-500">{{ __('No notifications yet.') }}</div>
+                                @else
+                                    @foreach ($recentNotifications as $notification)
+                                        @php($data = $notification->data)
+                                        <a href="{{ route($notificationRoute, $notification->id) }}" class="block px-4 py-3 text-sm hover:bg-gray-50 {{ $notification->read_at ? 'text-gray-600' : 'text-gray-800 bg-indigo-50' }}">
+                                            @if (($data['type'] ?? '') === 'application_submitted')
+                                                <p class="font-semibold">{{ __('New application') }} - {{ $data['job_title'] ?? __('Job') }}</p>
+                                                <p class="text-xs text-gray-500">{{ __('Applicant: :name', ['name' => $data['applicant'] ?? __('Applicant')]) }}</p>
+                                            @elseif (($data['type'] ?? '') === 'document_updated')
+                                                <p class="font-semibold">{{ __('Document updated') }} - {{ strtoupper($data['document_type'] ?? '') }}</p>
+                                                <p class="text-xs text-gray-500">{{ __('Applicant: :name', ['name' => $data['jobseeker'] ?? __('Applicant')]) }}</p>
+                                            @elseif (($data['type'] ?? '') === 'document_update_requested')
+                                                <p class="font-semibold">{{ __('Document update requested') }} - {{ strtoupper($data['document_type'] ?? '') }}</p>
+                                                <p class="text-xs text-gray-500">{{ __('Please update your document.') }}</p>
+                                            @else
+                                                <p class="font-semibold">{{ __('Application Update') }}</p>
+                                                <p class="text-xs text-gray-500">{{ $data['job_title'] ?? '' }}</p>
+                                            @endif
+                                            <p class="text-[10px] text-gray-400 mt-1">{{ $notification->created_at?->format('M d, Y H:i') }}</p>
+                                        </a>
+                                    @endforeach
+                                @endif
+                            </div>
+                            <div class="p-3 border-t text-right">
+                                <a href="{{ route($role === 'employer' ? 'employer.notifications' : 'jobseeker.notifications') }}" class="text-xs text-indigo-600 hover:text-indigo-900">
+                                    {{ __('View all') }}
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                @endif
+
                 <x-dropdown align="right" width="48">
                     <x-slot name="trigger">
                         <button class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 bg-white hover:text-gray-700 focus:outline-none transition ease-in-out duration-150">
@@ -112,8 +176,11 @@
                     </x-slot>
 
                     <x-slot name="content">
-                        <x-dropdown-link :href="route('profile.edit')">
+                        <x-dropdown-link :href="route($profileRoute)">
                             {{ __('Profile') }}
+                        </x-dropdown-link>
+                        <x-dropdown-link :href="route('profile.settings')">
+                            {{ __('Account Settings') }}
                         </x-dropdown-link>
 
                         <!-- Authentication -->
@@ -176,7 +243,7 @@
                 <x-responsive-nav-link :href="route('admin.settings')" :active="request()->routeIs('admin.settings')">
                     {{ __('Settings') }}
                 </x-responsive-nav-link>
-            @elseif ($role === 'employer')
+            @elseif ($isEmployerOwner || $isEmployerSubUser)
                 <x-responsive-nav-link :href="route('employer.dashboard')" :active="request()->routeIs('employer.dashboard')">
                     {{ __('Home') }}
                 </x-responsive-nav-link>
@@ -186,20 +253,17 @@
                 <x-responsive-nav-link :href="route('employer.applicants')" :active="request()->routeIs('employer.applicants')">
                     {{ __('Applicants') }}
                 </x-responsive-nav-link>
-                <x-responsive-nav-link :href="route('employer.ats')" :active="request()->routeIs('employer.ats')">
-                    {{ __('Applicant Tracking') }}
-                </x-responsive-nav-link>
-                <x-responsive-nav-link :href="route('employer.notifications')" :active="request()->routeIs('employer.notifications')">
-                    {{ __('Notifications') }}
-                    @if (Auth::user()->unreadNotifications()->count())
-                        <span class="ml-1 inline-flex items-center rounded-full bg-red-500 px-2 py-0.5 text-xs font-semibold text-white">
-                            {{ Auth::user()->unreadNotifications()->count() }}
-                        </span>
-                    @endif
+                <x-responsive-nav-link :href="route('employer.jobseekers.index')" :active="request()->routeIs('employer.jobseekers.*')">
+                    {{ __('Jobseeker Directory') }}
                 </x-responsive-nav-link>
                 <x-responsive-nav-link :href="route('employer.digital-ids')" :active="request()->routeIs('employer.digital-ids')">
                     {{ __('Digital IDs') }}
                 </x-responsive-nav-link>
+                @if ($isEmployerOwner || $employerSubRole === 'admin')
+                    <x-responsive-nav-link :href="route('employer.sub-users.index')" :active="request()->routeIs('employer.sub-users.*')">
+                        {{ __('Sub-Users') }}
+                    </x-responsive-nav-link>
+                @endif
             @else
                 <x-responsive-nav-link :href="route('jobseeker.dashboard')" :active="request()->routeIs('jobseeker.dashboard')">
                     {{ __('Home') }}
@@ -216,14 +280,6 @@
                 <x-responsive-nav-link :href="route('jobseeker.history')" :active="request()->routeIs('jobseeker.history')">
                     {{ __('History') }}
                 </x-responsive-nav-link>
-                <x-responsive-nav-link :href="route('jobseeker.notifications')" :active="request()->routeIs('jobseeker.notifications')">
-                    {{ __('Notifications') }}
-                    @if (Auth::user()->unreadNotifications()->count())
-                        <span class="ml-1 inline-flex items-center rounded-full bg-red-500 px-2 py-0.5 text-xs font-semibold text-white">
-                            {{ Auth::user()->unreadNotifications()->count() }}
-                        </span>
-                    @endif
-                </x-responsive-nav-link>
             @endif
         </div>
 
@@ -235,8 +291,11 @@
             </div>
 
             <div class="mt-3 space-y-1">
-                <x-responsive-nav-link :href="route('profile.edit')">
+                <x-responsive-nav-link :href="route($profileRoute)">
                     {{ __('Profile') }}
+                </x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('profile.settings')">
+                    {{ __('Account Settings') }}
                 </x-responsive-nav-link>
 
                 <!-- Authentication -->

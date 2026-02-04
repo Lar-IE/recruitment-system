@@ -9,6 +9,7 @@ use App\Models\DigitalId;
 use App\Models\Jobseeker;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class DigitalIdController extends Controller
@@ -73,6 +74,7 @@ class DigitalIdController extends Controller
             'issue_date' => $request->input('issue_date'),
             'status' => $request->input('status', 'active'),
             'issued_by' => $request->user()->id,
+            'public_token' => $digitalId?->public_token ?? Str::random(48),
         ];
 
         if ($digitalId) {
@@ -107,6 +109,12 @@ class DigitalIdController extends Controller
 
         if (! $employer || $digitalId->employer_id !== $employer->id) {
             abort(403);
+        }
+
+        if (! $digitalId->public_token) {
+            $digitalId->update([
+                'public_token' => Str::random(48),
+            ]);
         }
 
         return view('employer.digital-ids.show', [

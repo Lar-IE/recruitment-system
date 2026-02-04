@@ -56,12 +56,16 @@ class JobController extends Controller
         ]);
     }
 
-    public function show(Request $request, JobPost $jobPost): View
+    public function show(Request $request, JobPost $jobPost): View|RedirectResponse
     {
-        abort_if($jobPost->status !== 'published', 404);
+        if ($jobPost->status !== 'published') {
+            return redirect()->route('jobseeker.jobs')
+                ->withErrors(['job' => __('This job is not published yet.')]);
+        }
 
-        if ($jobPost->application_deadline && $jobPost->application_deadline->isPast()) {
-            abort(404);
+        if ($jobPost->application_deadline && $jobPost->application_deadline->lt(now()->startOfDay())) {
+            return redirect()->route('jobseeker.jobs')
+                ->withErrors(['job' => __('The application deadline has passed.')]);
         }
 
         $jobseeker = $request->user()->jobseeker;
@@ -91,7 +95,7 @@ class JobController extends Controller
             return back()->withErrors(['job' => __('This job is not open for applications.')]);
         }
 
-        if ($jobPost->application_deadline && $jobPost->application_deadline->isPast()) {
+        if ($jobPost->application_deadline && $jobPost->application_deadline->lt(now()->startOfDay())) {
             return back()->withErrors(['job' => __('The application deadline has passed.')]);
         }
 

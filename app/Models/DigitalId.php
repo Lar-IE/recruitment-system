@@ -21,6 +21,7 @@ class DigitalId extends Model
         'issue_date',
         'status',
         'issued_by',
+        'public_token',
     ];
 
     protected $casts = [

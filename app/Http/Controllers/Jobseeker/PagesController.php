@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Jobseeker;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class PagesController extends Controller
@@ -26,6 +27,12 @@ class PagesController extends Controller
             $digitalId = $jobseeker->digitalIds()
                 ->latest()
                 ->first();
+        }
+
+        if ($digitalId && ! $digitalId->public_token) {
+            $digitalId->update([
+                'public_token' => Str::random(48),
+            ]);
         }
 
         return view('jobseeker.digital-id.index', [

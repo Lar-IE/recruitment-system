@@ -49,11 +49,17 @@
                                                     {{ $user->is_active ? __('Active') : __('Suspended') }}
                                                 </span>
                                             </td>
-                                            <td class="py-3 pr-4 text-right">
-                                                <form method="POST" action="{{ route('admin.users.toggle-status', $user) }}">
+                                            <td class="py-3 pr-4 text-right space-x-2">
+                                                <form method="POST" action="{{ route('admin.users.toggle-status', $user) }}" class="inline">
                                                     @csrf
                                                     <x-secondary-button type="submit" class="text-xs">
                                                         {{ $user->is_active ? __('Suspend') : __('Activate') }}
+                                                    </x-secondary-button>
+                                                </form>
+                                                <form method="POST" action="{{ route('admin.users.reset-password', $user) }}" class="inline" onsubmit="return confirm('Reset password for {{ $user->email }}?')">
+                                                    @csrf
+                                                    <x-secondary-button type="submit" class="text-xs">
+                                                        {{ __('Reset Password') }}
                                                     </x-secondary-button>
                                                 </form>
                                             </td>

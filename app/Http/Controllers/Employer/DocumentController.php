@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Employer\RequestDocumentUpdateRequest;
 use App\Models\Document;
 use App\Models\Jobseeker;
+use App\Notifications\DocumentUpdateRequested;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -108,6 +109,10 @@ class DocumentController extends Controller
             'reviewed_at' => now(),
             'remarks' => $remarks,
         ]);
+
+        if ($document->jobseeker?->user) {
+            $document->jobseeker->user->notify(new DocumentUpdateRequested($document));
+        }
 
         return redirect()->route('employer.documents')
             ->with('success', __('Update request sent to applicant.'));

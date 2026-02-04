@@ -26,7 +26,9 @@ class NoteController extends Controller
             'employer_id' => $employer->id,
             'application_id' => $application->id,
             'note' => $validated['note'],
-            'created_by' => $request->user()->id,
+            'created_by' => $request->user() instanceof \App\Models\User
+                ? $request->user()->id
+                : null,
         ]);
 
         return redirect()->route('employer.applicants.show', $application)

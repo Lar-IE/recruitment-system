@@ -15,6 +15,10 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => \App\Http\Middleware\RoleMiddleware::class,
             'jobseeker.profile' => \App\Http\Middleware\EnsureJobseekerProfile::class,
             'active' => \App\Http\Middleware\EnsureUserIsActive::class,
+            'maintenance' => \App\Http\Middleware\EnsureNotInMaintenance::class,
+            'employer.approved' => \App\Http\Middleware\EnsureEmployerApproved::class,
+            'employer.user' => \App\Http\Middleware\EnsureEmployerUser::class,
+            'employer.role' => \App\Http\Middleware\EnsureEmployerRole::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

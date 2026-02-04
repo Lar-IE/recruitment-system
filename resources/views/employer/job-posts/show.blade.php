@@ -70,13 +70,13 @@
                         @if ($jobPost->status !== 'closed')
                             <form method="POST" action="{{ route('employer.job-posts.close', $jobPost) }}">
                                 @csrf
-                                <x-secondary-button>{{ __('Close') }}</x-secondary-button>
+                                <x-secondary-button type="submit">{{ __('Close') }}</x-secondary-button>
                             </form>
                         @endif
 
                         <form method="POST" action="{{ route('employer.job-posts.duplicate', $jobPost) }}">
                             @csrf
-                            <x-secondary-button>{{ __('Duplicate') }}</x-secondary-button>
+                            <x-secondary-button type="submit">{{ __('Duplicate') }}</x-secondary-button>
                         </form>
 
                         <form method="POST" action="{{ route('employer.job-posts.destroy', $jobPost) }}" onsubmit="return confirm('{{ __('Delete this job post?') }}')">

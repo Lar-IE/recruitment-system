@@ -8,44 +8,13 @@ use App\Models\ApplicationStatus;
 use App\Notifications\ApplicationStatusUpdated;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\View\View;
 
 class AtsController extends Controller
 {
-    public function index(Request $request): View
+    public function index(Request $request): RedirectResponse
     {
-        $employer = $request->user()->employer;
-
-        if (! $employer) {
-            abort(403);
-        }
-
-        $query = Application::with(['jobPost', 'jobseeker.user'])
-            ->whereHas('jobPost', function ($builder) use ($employer) {
-                $builder->where('employer_id', $employer->id);
-            })
-            ->latest('applied_at');
-
-        if ($request->filled('status')) {
-            $query->where('current_status', $request->string('status')->value());
-        }
-
-        if ($request->filled('job_post_id')) {
-            $query->where('job_post_id', $request->integer('job_post_id'));
-        }
-
-        $applications = $query->paginate(10)->withQueryString();
-
-        $jobPosts = $employer->jobPosts()
-            ->orderBy('title')
-            ->get(['id', 'title']);
-
-        return view('employer.ats.index', [
-            'applications' => $applications,
-            'jobPosts' => $jobPosts,
-            'filters' => $request->only(['status', 'job_post_id']),
-            'statuses' => $this->statuses(),
-        ]);
+        return redirect()
+            ->route('employer.applicants', $request->query());
     }
 
     public function updateStatus(Request $request, Application $application): RedirectResponse
@@ -59,6 +28,8 @@ class AtsController extends Controller
         $validated = $request->validate([
             'status' => ['required', 'in:new,under_review,interview_scheduled,shortlisted,hired,rejected,on_hold'],
             'note' => ['nullable', 'string', 'max:1000'],
+            'interview_at' => ['required_if:status,interview_scheduled', 'date'],
+            'interview_link' => ['required_if:status,interview_scheduled', 'url', 'max:2048'],
         ]);
 
         $application->update([
@@ -69,16 +40,29 @@ class AtsController extends Controller
             'application_id' => $application->id,
             'status' => $validated['status'],
             'note' => $validated['note'] ?? null,
-            'set_by' => $request->user()->id,
+            'interview_at' => $validated['status'] === 'interview_scheduled'
+                ? $validated['interview_at']
+                : null,
+            'interview_link' => $validated['status'] === 'interview_scheduled'
+                ? $validated['interview_link']
+                : null,
+            'set_by' => $request->user() instanceof \App\Models\User
+                ? $request->user()->id
+                : null,
         ]);
 
         if ($application->jobseeker && $application->jobseeker->user) {
             $application->jobseeker->user->notify(
-                new ApplicationStatusUpdated($application->load('jobPost.employer.user'), $validated['note'] ?? null)
+                new ApplicationStatusUpdated(
+                    $application->load('jobPost.employer.user'),
+                    $validated['note'] ?? null,
+                    $validated['status'] === 'interview_scheduled' ? ($validated['interview_at'] ?? null) : null,
+                    $validated['status'] === 'interview_scheduled' ? ($validated['interview_link'] ?? null) : null
+                )
             );
         }
 
-        return redirect()->route('employer.ats', $request->query())
+        return redirect()->route('employer.applicants', $request->query())
             ->with('success', __('Status updated.'));
     }
 

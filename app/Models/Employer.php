@@ -2,12 +2,13 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Employer extends Model
 {
-    use SoftDeletes;
+    use HasFactory, SoftDeletes;
 
     protected $fillable = [
         'user_id',
@@ -41,5 +42,10 @@ class Employer extends Model
     public function notes()
     {
         return $this->hasMany(EmployerNote::class);
+    }
+
+    public function subUsers()
+    {
+        return $this->hasMany(EmployerSubUser::class);
     }
 }

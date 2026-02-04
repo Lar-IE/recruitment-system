@@ -81,10 +81,11 @@
                             <div>
                                 <x-input-label for="status" :value="__('Status')" />
                                 <select id="status" name="status" class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
-                                    <option value="draft" {{ old('status', 'draft') === 'draft' ? 'selected' : '' }}>{{ __('Draft') }}</option>
-                                    <option value="published" {{ old('status') === 'published' ? 'selected' : '' }}>{{ __('Published') }}</option>
-                                    <option value="closed" {{ old('status') === 'closed' ? 'selected' : '' }}>{{ __('Closed') }}</option>
+                                    <option value="draft" {{ old('status', 'published') === 'draft' ? 'selected' : '' }}>{{ __('Draft') }}</option>
+                                    <option value="published" {{ old('status', 'published') === 'published' ? 'selected' : '' }}>{{ __('Published') }}</option>
+                                    <option value="closed" {{ old('status', 'published') === 'closed' ? 'selected' : '' }}>{{ __('Closed') }}</option>
                                 </select>
+                                <p class="mt-1 text-xs text-gray-500">{{ __('Published jobs are visible to jobseekers.') }}</p>
                                 <x-input-error :messages="$errors->get('status')" class="mt-2" />
                             </div>
                         </div>

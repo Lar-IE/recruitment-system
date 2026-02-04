@@ -197,7 +197,7 @@ class JobPostController extends Controller
 
     private function slugExists(string $slug, ?int $ignoreId = null): bool
     {
-        $query = JobPost::where('slug', $slug);
+        $query = JobPost::withTrashed()->where('slug', $slug);
 
         if ($ignoreId) {
             $query->where('id', '!=', $ignoreId);
