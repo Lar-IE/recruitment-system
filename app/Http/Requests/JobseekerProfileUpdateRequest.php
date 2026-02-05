@@ -14,15 +14,19 @@ class JobseekerProfileUpdateRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'phone' => ['nullable', 'string', 'max:30'],
+            'first_name' => ['required', 'string', 'max:255'],
+            'middle_name' => ['nullable', 'string', 'max:255'],
+            'last_name' => ['required', 'string', 'max:255'],
+            'phone' => ['required', 'string', 'max:30', 'regex:/^\+63[0-9]{9,10}$/'],
             'address' => ['nullable', 'string', 'max:255'],
             'barangay' => ['nullable', 'string', 'max:100'],
-            'city' => ['nullable', 'string', 'max:100'],
+            'city' => ['required', 'string', 'max:100'],
             'province' => ['nullable', 'string', 'max:100'],
             'region' => ['nullable', 'string', 'max:100'],
             'country' => ['nullable', 'string', 'max:100'],
-            'birth_date' => ['nullable', 'date'],
-            'gender' => ['nullable', 'string', 'max:20'],
+            'birth_date' => ['required', 'date', 'before:today'],
+            'gender' => ['required', 'string', 'in:Male,Female,Other,Prefer not to say'],
+            'educational_attainment' => ['required', 'string', 'in:Elementary Graduate,High School Graduate,Vocational Graduate,College Undergraduate,College Graduate,Post Graduate'],
             'bio' => ['nullable', 'string', 'max:2000'],
             'skills' => ['nullable', 'string', 'max:4000'],
             

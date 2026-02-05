@@ -55,7 +55,7 @@
                                     @foreach ($applications as $application)
                                         <tr class="border-t align-top">
                                             <td class="py-3 pr-4">
-                                                <p class="font-medium">{{ $application->jobseeker->user->name ?? __('N/A') }}</p>
+                                                <p class="font-medium">{{ $application->jobseeker->full_name ?: ($application->jobseeker->user->name ?? __('N/A')) }}</p>
                                                 <p class="text-xs text-gray-500">{{ $application->jobseeker->user->email ?? '' }}</p>
                                             </td>
                                             <td class="py-3 pr-4">{{ $application->jobPost->title ?? __('N/A') }}</td>

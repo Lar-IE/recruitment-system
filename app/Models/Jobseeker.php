@@ -11,6 +11,9 @@ class Jobseeker extends Model
 
     protected $fillable = [
         'user_id',
+        'first_name',
+        'middle_name',
+        'last_name',
         'phone',
         'address',
         'barangay',
@@ -20,6 +23,7 @@ class Jobseeker extends Model
         'country',
         'birth_date',
         'gender',
+        'educational_attainment',
         'bio',
         'education',
         'experience',
@@ -59,5 +63,10 @@ class Jobseeker extends Model
     public function workExperiences()
     {
         return $this->hasMany(JobseekerWorkExperience::class)->orderBy('order');
+    }
+
+    public function getFullNameAttribute()
+    {
+        return trim(($this->first_name ?? '') . ' ' . ($this->middle_name ?? '') . ' ' . ($this->last_name ?? ''));
     }
 }

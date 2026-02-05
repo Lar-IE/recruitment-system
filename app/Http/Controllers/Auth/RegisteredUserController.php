@@ -64,9 +64,10 @@ class RegisteredUserController extends Controller
             ]);
         }
 
+        // Create empty jobseeker profile for new jobseekers
         if ($user->role === UserRole::Jobseeker) {
-            Jobseeker::create([
-                'user_id' => $user->id,
+            $user->jobseeker()->create([
+                'status' => 'active',
             ]);
         }
 
@@ -77,7 +78,7 @@ class RegisteredUserController extends Controller
         // Redirect jobseekers to profile edit page to complete their profile
         if ($user->role === UserRole::Jobseeker) {
             return redirect(route('jobseeker.profile.edit', absolute: false))
-                ->with('success', __('Welcome! Please complete your profile to get started.'));
+                ->with('info', __('Welcome! Please complete your profile to get started.'));
         }
 
         return redirect(route('dashboard', absolute: false));

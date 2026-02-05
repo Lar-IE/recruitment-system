@@ -30,13 +30,28 @@
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
+                    <x-input-label for="first_name" :value="__('First Name')" />
+                    <x-text-input id="first_name" name="first_name" type="text" class="mt-1 block w-full" :value="old('first_name', $jobseeker->first_name)" required autofocus />
+                    <x-input-error class="mt-2" :messages="$errors->get('first_name')" />
+                </div>
+                <div>
+                    <x-input-label for="middle_name" :value="__('Middle Name (Optional)')" />
+                    <x-text-input id="middle_name" name="middle_name" type="text" class="mt-1 block w-full" :value="old('middle_name', $jobseeker->middle_name)" />
+                    <x-input-error class="mt-2" :messages="$errors->get('middle_name')" />
+                </div>
+                <div>
+                    <x-input-label for="last_name" :value="__('Last Name')" />
+                    <x-text-input id="last_name" name="last_name" type="text" class="mt-1 block w-full" :value="old('last_name', $jobseeker->last_name)" required />
+                    <x-input-error class="mt-2" :messages="$errors->get('last_name')" />
+                </div>
+                <div>
                     <x-input-label for="phone" :value="__('Phone')" />
-                    <x-text-input id="phone" name="phone" type="text" class="mt-1 block w-full" :value="old('phone', $jobseeker->phone)" />
+                    <x-text-input id="phone" name="phone" type="text" class="mt-1 block w-full" :value="old('phone', $jobseeker->phone ?: '+63')" required placeholder="+639XXXXXXXXX" />
                     <x-input-error class="mt-2" :messages="$errors->get('phone')" />
                 </div>
                 <div>
                     <x-input-label for="birth_date" :value="__('Birth Date')" />
-                    <x-text-input id="birth_date" name="birth_date" type="date" class="mt-1 block w-full" :value="old('birth_date', $jobseeker->birth_date?->format('Y-m-d'))" />
+                    <x-text-input id="birth_date" name="birth_date" type="date" class="mt-1 block w-full" :value="old('birth_date', $jobseeker->birth_date?->format('Y-m-d'))" required />
                     <x-input-error class="mt-2" :messages="$errors->get('birth_date')" />
                 </div>
                 <div>
@@ -48,7 +63,7 @@
                 </div>
                 <div>
                     <x-input-label for="gender" :value="__('Gender')" />
-                    <select id="gender" name="gender" class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+                    <select id="gender" name="gender" class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm" required>
                         <option value="">{{ __('Select gender') }}</option>
                         @foreach ($genderOptions as $option)
                             <option value="{{ $option }}" @selected(old('gender', $jobseeker->gender) === $option)>
@@ -57,6 +72,19 @@
                         @endforeach
                     </select>
                     <x-input-error class="mt-2" :messages="$errors->get('gender')" />
+                </div>
+                <div>
+                    <x-input-label for="educational_attainment" :value="__('Educational Attainment')" />
+                    <select id="educational_attainment" name="educational_attainment" class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm" required>
+                        <option value="">{{ __('Select educational attainment') }}</option>
+                        <option value="Elementary Graduate" @selected(old('educational_attainment', $jobseeker->educational_attainment) === 'Elementary Graduate')>{{ __('Elementary Graduate') }}</option>
+                        <option value="High School Graduate" @selected(old('educational_attainment', $jobseeker->educational_attainment) === 'High School Graduate')>{{ __('High School Graduate') }}</option>
+                        <option value="Vocational Graduate" @selected(old('educational_attainment', $jobseeker->educational_attainment) === 'Vocational Graduate')>{{ __('Vocational Graduate') }}</option>
+                        <option value="College Undergraduate" @selected(old('educational_attainment', $jobseeker->educational_attainment) === 'College Undergraduate')>{{ __('College Undergraduate') }}</option>
+                        <option value="College Graduate" @selected(old('educational_attainment', $jobseeker->educational_attainment) === 'College Graduate')>{{ __('College Graduate') }}</option>
+                        <option value="Post Graduate" @selected(old('educational_attainment', $jobseeker->educational_attainment) === 'Post Graduate')>{{ __('Post Graduate') }}</option>
+                    </select>
+                    <x-input-error class="mt-2" :messages="$errors->get('educational_attainment')" />
                 </div>
                 <div>
                     <x-input-label for="country" :value="__('Country')" />
@@ -79,7 +107,7 @@
                 </div>
                 <div>
                     <x-input-label for="city" :value="__('City')" />
-                    <select id="city" name="city" class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm" data-current-value="{{ old('city', $jobseeker->city) }}">
+                    <select id="city" name="city" class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm" data-current-value="{{ old('city', $jobseeker->city) }}" required>
                         <option value="">{{ __('Select city/municipality') }}</option>
                     </select>
                     <x-input-error class="mt-2" :messages="$errors->get('city')" />
@@ -125,6 +153,16 @@
                         }
                     @endphp
                     @foreach($educations as $index => $education)
+                        @php
+                            // Handle both array (from old input) and object (from database)
+                            $isArray = is_array($education);
+                            $institution = $isArray ? ($education['institution'] ?? '') : ($education?->institution ?? '');
+                            $degree = $isArray ? ($education['degree'] ?? '') : ($education?->degree ?? '');
+                            $fieldOfStudy = $isArray ? ($education['field_of_study'] ?? '') : ($education?->field_of_study ?? '');
+                            $startDate = $isArray ? ($education['start_date'] ?? '') : ($education?->start_date?->format('Y-m-d') ?? '');
+                            $endDate = $isArray ? ($education['end_date'] ?? '') : ($education?->end_date?->format('Y-m-d') ?? '');
+                            $description = $isArray ? ($education['description'] ?? '') : ($education?->description ?? '');
+                        @endphp
                         <div class="education-item border border-gray-300 rounded-lg p-4 bg-gray-50">
                             <div class="flex justify-between items-center mb-3">
                                 <h4 class="font-semibold text-sm text-gray-700">{{ __('Education') }} #{{ $index + 1 }}</h4>
@@ -135,32 +173,32 @@
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                                 <div class="md:col-span-2">
                                     <x-input-label :value="__('Institution/School Name')" />
-                                    <x-text-input type="text" name="education[{{ $index }}][institution]" class="mt-1 block w-full" :value="old('education.'.$index.'.institution', $education->institution ?? '')" placeholder="{{ __('e.g., ABC University') }}" />
+                                    <x-text-input type="text" name="education[{{ $index }}][institution]" class="mt-1 block w-full" :value="$institution" placeholder="{{ __('e.g., ABC University') }}" />
                                     <x-input-error class="mt-2" :messages="$errors->get('education.'.$index.'.institution')" />
                                 </div>
                                 <div>
                                     <x-input-label :value="__('Degree/Level')" />
-                                    <x-text-input type="text" name="education[{{ $index }}][degree]" class="mt-1 block w-full" :value="old('education.'.$index.'.degree', $education->degree ?? '')" placeholder="{{ __('e.g., Bachelor of Science') }}" />
+                                    <x-text-input type="text" name="education[{{ $index }}][degree]" class="mt-1 block w-full" :value="$degree" placeholder="{{ __('e.g., Bachelor of Science') }}" />
                                     <x-input-error class="mt-2" :messages="$errors->get('education.'.$index.'.degree')" />
                                 </div>
                                 <div>
                                     <x-input-label :value="__('Field of Study')" />
-                                    <x-text-input type="text" name="education[{{ $index }}][field_of_study]" class="mt-1 block w-full" :value="old('education.'.$index.'.field_of_study', $education->field_of_study ?? '')" placeholder="{{ __('e.g., Computer Science') }}" />
+                                    <x-text-input type="text" name="education[{{ $index }}][field_of_study]" class="mt-1 block w-full" :value="$fieldOfStudy" placeholder="{{ __('e.g., Computer Science') }}" />
                                     <x-input-error class="mt-2" :messages="$errors->get('education.'.$index.'.field_of_study')" />
                                 </div>
                                 <div>
                                     <x-input-label :value="__('Start Date')" />
-                                    <x-text-input type="date" name="education[{{ $index }}][start_date]" class="mt-1 block w-full" :value="old('education.'.$index.'.start_date', $education->start_date?->format('Y-m-d') ?? '')" />
+                                    <x-text-input type="date" name="education[{{ $index }}][start_date]" class="mt-1 block w-full" :value="$startDate" />
                                     <x-input-error class="mt-2" :messages="$errors->get('education.'.$index.'.start_date')" />
                                 </div>
                                 <div>
                                     <x-input-label :value="__('End Date')" />
-                                    <x-text-input type="date" name="education[{{ $index }}][end_date]" class="mt-1 block w-full" :value="old('education.'.$index.'.end_date', $education->end_date?->format('Y-m-d') ?? '')" />
+                                    <x-text-input type="date" name="education[{{ $index }}][end_date]" class="mt-1 block w-full" :value="$endDate" />
                                     <x-input-error class="mt-2" :messages="$errors->get('education.'.$index.'.end_date')" />
                                 </div>
                                 <div class="md:col-span-2">
                                     <x-input-label :value="__('Description (Optional)')" />
-                                    <textarea name="education[{{ $index }}][description]" rows="2" class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm" placeholder="{{ __('e.g., Awards, achievements, relevant coursework') }}">{{ old('education.'.$index.'.description', $education->description ?? '') }}</textarea>
+                                    <textarea name="education[{{ $index }}][description]" rows="2" class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm" placeholder="{{ __('e.g., Awards, achievements, relevant coursework') }}">{{ $description }}</textarea>
                                     <x-input-error class="mt-2" :messages="$errors->get('education.'.$index.'.description')" />
                                 </div>
                             </div>
@@ -185,6 +223,16 @@
                         }
                     @endphp
                     @foreach($workExperiences as $index => $experience)
+                        @php
+                            // Handle both array (from old input) and object (from database)
+                            $isArray = is_array($experience);
+                            $company = $isArray ? ($experience['company'] ?? '') : ($experience?->company ?? '');
+                            $position = $isArray ? ($experience['position'] ?? '') : ($experience?->position ?? '');
+                            $expStartDate = $isArray ? ($experience['start_date'] ?? '') : ($experience?->start_date?->format('Y-m-d') ?? '');
+                            $expEndDate = $isArray ? ($experience['end_date'] ?? '') : ($experience?->end_date?->format('Y-m-d') ?? '');
+                            $isCurrent = $isArray ? ($experience['is_current'] ?? false) : ($experience?->is_current ?? false);
+                            $expDescription = $isArray ? ($experience['description'] ?? '') : ($experience?->description ?? '');
+                        @endphp
                         <div class="work-experience-item border border-gray-300 rounded-lg p-4 bg-gray-50">
                             <div class="flex justify-between items-center mb-3">
                                 <h4 class="font-semibold text-sm text-gray-700">{{ __('Work Experience') }} #{{ $index + 1 }}</h4>
@@ -195,33 +243,33 @@
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                                 <div>
                                     <x-input-label :value="__('Company Name')" />
-                                    <x-text-input type="text" name="work_experience[{{ $index }}][company]" class="mt-1 block w-full" :value="old('work_experience.'.$index.'.company', $experience->company ?? '')" placeholder="{{ __('e.g., XYZ Corporation') }}" />
+                                    <x-text-input type="text" name="work_experience[{{ $index }}][company]" class="mt-1 block w-full" :value="$company" placeholder="{{ __('e.g., XYZ Corporation') }}" />
                                     <x-input-error class="mt-2" :messages="$errors->get('work_experience.'.$index.'.company')" />
                                 </div>
                                 <div>
                                     <x-input-label :value="__('Position/Job Title')" />
-                                    <x-text-input type="text" name="work_experience[{{ $index }}][position]" class="mt-1 block w-full" :value="old('work_experience.'.$index.'.position', $experience->position ?? '')" placeholder="{{ __('e.g., Software Developer') }}" />
+                                    <x-text-input type="text" name="work_experience[{{ $index }}][position]" class="mt-1 block w-full" :value="$position" placeholder="{{ __('e.g., Software Developer') }}" />
                                     <x-input-error class="mt-2" :messages="$errors->get('work_experience.'.$index.'.position')" />
                                 </div>
                                 <div>
                                     <x-input-label :value="__('Start Date')" />
-                                    <x-text-input type="date" name="work_experience[{{ $index }}][start_date]" class="mt-1 block w-full" :value="old('work_experience.'.$index.'.start_date', $experience->start_date?->format('Y-m-d') ?? '')" />
+                                    <x-text-input type="date" name="work_experience[{{ $index }}][start_date]" class="mt-1 block w-full" :value="$expStartDate" />
                                     <x-input-error class="mt-2" :messages="$errors->get('work_experience.'.$index.'.start_date')" />
                                 </div>
                                 <div>
                                     <x-input-label :value="__('End Date')" />
-                                    <x-text-input type="date" name="work_experience[{{ $index }}][end_date]" class="mt-1 block w-full end-date-input" :value="old('work_experience.'.$index.'.end_date', $experience->end_date?->format('Y-m-d') ?? '')" />
+                                    <x-text-input type="date" name="work_experience[{{ $index }}][end_date]" class="mt-1 block w-full end-date-input" :value="$expEndDate" />
                                     <x-input-error class="mt-2" :messages="$errors->get('work_experience.'.$index.'.end_date')" />
                                 </div>
                                 <div class="md:col-span-2">
                                     <label class="inline-flex items-center">
-                                        <input type="checkbox" name="work_experience[{{ $index }}][is_current]" value="1" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500 current-job-checkbox" {{ old('work_experience.'.$index.'.is_current', $experience->is_current ?? false) ? 'checked' : '' }}>
+                                        <input type="checkbox" name="work_experience[{{ $index }}][is_current]" value="1" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500 current-job-checkbox" {{ $isCurrent ? 'checked' : '' }}>
                                         <span class="ml-2 text-sm text-gray-600">{{ __('I currently work here') }}</span>
                                     </label>
                                 </div>
                                 <div class="md:col-span-2">
                                     <x-input-label :value="__('Description (Optional)')" />
-                                    <textarea name="work_experience[{{ $index }}][description]" rows="3" class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm" placeholder="{{ __('e.g., Key responsibilities and achievements') }}">{{ old('work_experience.'.$index.'.description', $experience->description ?? '') }}</textarea>
+                                    <textarea name="work_experience[{{ $index }}][description]" rows="3" class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm" placeholder="{{ __('e.g., Key responsibilities and achievements') }}">{{ $expDescription }}</textarea>
                                     <x-input-error class="mt-2" :messages="$errors->get('work_experience.'.$index.'.description')" />
                                 </div>
                             </div>

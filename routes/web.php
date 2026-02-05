@@ -121,6 +121,15 @@ Route::middleware('maintenance')->group(function () {
         Route::get('/jobseekers', [JobseekerDirectoryController::class, 'index'])
             ->middleware('employer.role:admin,recruiter,viewer')
             ->name('jobseekers.index');
+        Route::get('/jobseekers/template', [JobseekerDirectoryController::class, 'downloadTemplate'])
+            ->middleware('employer.role:admin,recruiter,viewer')
+            ->name('jobseekers.template');
+        Route::get('/jobseekers/export', [JobseekerDirectoryController::class, 'export'])
+            ->middleware('employer.role:admin,recruiter,viewer')
+            ->name('jobseekers.export');
+        Route::post('/jobseekers/import', [JobseekerDirectoryController::class, 'import'])
+            ->middleware('employer.role:admin,recruiter')
+            ->name('jobseekers.import');
         Route::get('/jobseekers/{jobseeker}', [JobseekerDirectoryController::class, 'show'])
             ->middleware('employer.role:admin,recruiter,viewer')
             ->whereNumber('jobseeker')
@@ -128,6 +137,15 @@ Route::middleware('maintenance')->group(function () {
         Route::get('/applicants', [EmployerApplicantsController::class, 'index'])
             ->middleware('employer.role:admin,recruiter,viewer')
             ->name('applicants');
+        Route::get('/applicants/template', [EmployerApplicantsController::class, 'downloadTemplate'])
+            ->middleware('employer.role:admin,recruiter,viewer')
+            ->name('applicants.template');
+        Route::get('/applicants/export', [EmployerApplicantsController::class, 'export'])
+            ->middleware('employer.role:admin,recruiter,viewer')
+            ->name('applicants.export');
+        Route::post('/applicants/import', [EmployerApplicantsController::class, 'import'])
+            ->middleware('employer.role:admin,recruiter')
+            ->name('applicants.import');
         Route::get('/applicants/{application}', [EmployerApplicantsController::class, 'show'])
             ->middleware('employer.role:admin,recruiter,viewer')
             ->name('applicants.show');
@@ -197,11 +215,16 @@ Route::middleware('maintenance')->group(function () {
             ->name('sub-users.destroy');
     });
 
+    // Jobseeker profile completion routes (no profile check required)
+    Route::middleware(['auth', 'verified', 'active', 'role:jobseeker'])->prefix('jobseeker')->name('jobseeker.')->group(function () {
+        Route::get('/profile/edit', [JobseekerProfileController::class, 'edit'])->name('profile.edit');
+        Route::patch('/profile', [JobseekerProfileController::class, 'update'])->name('profile.update');
+    });
+
+    // Jobseeker protected routes (requires complete profile)
     Route::middleware(['auth', 'verified', 'active', 'role:jobseeker', 'jobseeker.profile'])->prefix('jobseeker')->name('jobseeker.')->group(function () {
         Route::get('/dashboard', [JobseekerDashboardController::class, 'index'])->name('dashboard');
         Route::get('/profile', [JobseekerProfileController::class, 'show'])->name('profile.show');
-        Route::get('/profile/edit', [JobseekerProfileController::class, 'edit'])->name('profile.edit');
-        Route::patch('/profile', [JobseekerProfileController::class, 'update'])->name('profile.update');
         Route::get('/jobs', [JobseekerJobController::class, 'index'])->name('jobs');
         Route::get('/jobs/{jobPost}', [JobseekerJobController::class, 'show'])->name('jobs.show');
         Route::post('/jobs/{jobPost}/apply', [JobseekerJobController::class, 'apply'])->name('jobs.apply');

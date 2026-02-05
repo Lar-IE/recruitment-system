@@ -59,7 +59,13 @@
                             <p class="text-sm text-gray-600">
                                 <span>{{ $user->email ?? '-' }}</span>
                                 <span class="mx-2 text-gray-300">|</span>
-                                <span>{{ $jobseeker->phone ?? '-' }}</span>
+                                <span>
+                                    @if ($jobseeker->phone)
+                                        {{ str_starts_with($jobseeker->phone, '+63') ? $jobseeker->phone : '+63' . ltrim($jobseeker->phone, '0') }}
+                                    @else
+                                        -
+                                    @endif
+                                </span>
                                 @if ($location)
                                     <span class="mx-2 text-gray-300">|</span>
                                     <span>{{ $location }}</span>
@@ -130,7 +136,13 @@
                         <div class="border rounded-lg p-4">
                             <h4 class="text-sm font-semibold text-gray-800">{{ __('Basic Information') }}</h4>
                             <div class="mt-3 space-y-2 text-sm text-gray-600">
-                            <p><span class="font-semibold text-gray-800">{{ __('Contact Number:') }}</span> {{ $jobseeker->phone ?? '-' }}</p>
+                            <p><span class="font-semibold text-gray-800">{{ __('Contact Number:') }}</span> 
+                                @if ($jobseeker->phone)
+                                    {{ str_starts_with($jobseeker->phone, '+63') ? $jobseeker->phone : '+63' . ltrim($jobseeker->phone, '0') }}
+                                @else
+                                    -
+                                @endif
+                            </p>
                                 <p><span class="font-semibold text-gray-800">{{ __('Birth Date:') }}</span> {{ $jobseeker->birth_date?->format('M d, Y') ?? '-' }}</p>
                             <p><span class="font-semibold text-gray-800">{{ __('Age:') }}</span> {{ $age ?? '-' }}</p>
                                 <p><span class="font-semibold text-gray-800">{{ __('Gender:') }}</span> {{ $jobseeker->gender ? ucfirst($jobseeker->gender) : '-' }}</p>
@@ -140,7 +152,7 @@
                                 <p><span class="font-semibold text-gray-800">{{ __('Province:') }}</span> {{ $jobseeker->province ?? '-' }}</p>
                                 <p><span class="font-semibold text-gray-800">{{ __('Region:') }}</span> {{ $jobseeker->region ?? '-' }}</p>
                                 <p><span class="font-semibold text-gray-800">{{ __('Country:') }}</span> {{ $jobseeker->country ?? '-' }}</p>
-                            <p><span class="font-semibold text-gray-800">{{ __('Educational Attainment:') }}</span> {{ $educationSummary->isNotEmpty() ? $educationSummary->toString() : '-' }}</p>
+                            <p><span class="font-semibold text-gray-800">{{ __('Educational Attainment:') }}</span> {{ $jobseeker->educational_attainment ?? '-' }}</p>
                             </div>
                         </div>
                     </div>

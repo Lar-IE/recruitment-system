@@ -3,6 +3,10 @@
 
     $user = $jobseeker->user;
     $age = $jobseeker->birth_date?->age;
+    $firstEducation = $jobseeker->educations->first();
+    $educationSummary = $firstEducation 
+        ? ($firstEducation->degree ? $firstEducation->degree . ' - ' : '') . $firstEducation->institution
+        : '';
 @endphp
 <x-app-layout>
     <x-slot name="header">
@@ -24,7 +28,7 @@
                     <div class="mt-4 grid grid-cols-1 gap-4 text-sm text-gray-700 md:grid-cols-2 lg:grid-cols-3">
                         <div>
                             <p class="text-xs font-semibold text-gray-500">{{ __('Name') }}</p>
-                            <p>{{ $user->name ?? '-' }}</p>
+                            <p>{{ $jobseeker->full_name ?: ($user->name ?? '-') }}</p>
                         </div>
                         <div>
                             <p class="text-xs font-semibold text-gray-500">{{ __('Email') }}</p>
@@ -32,7 +36,13 @@
                         </div>
                         <div>
                             <p class="text-xs font-semibold text-gray-500">{{ __('Contact number') }}</p>
-                            <p>{{ $jobseeker->phone ?? '-' }}</p>
+                            <p>
+                                @if ($jobseeker->phone)
+                                    {{ str_starts_with($jobseeker->phone, '+63') ? $jobseeker->phone : '+63' . ltrim($jobseeker->phone, '0') }}
+                                @else
+                                    -
+                                @endif
+                            </p>
                         </div>
                         <div>
                             <p class="text-xs font-semibold text-gray-500">{{ __('City Location') }}</p>
@@ -40,7 +50,11 @@
                         </div>
                         <div>
                             <p class="text-xs font-semibold text-gray-500">{{ __('Educational Attainment') }}</p>
-                            <p>{{ $jobseeker->education ? Str::of($jobseeker->education)->before("\n")->trim() : '-' }}</p>
+                            <p>{{ $jobseeker->educational_attainment ?? '-' }}</p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold text-gray-500">{{ __('Education Details') }}</p>
+                            <p>{{ $educationSummary ?: '-' }}</p>
                         </div>
                         <div>
                             <p class="text-xs font-semibold text-gray-500">{{ __('Gender') }}</p>

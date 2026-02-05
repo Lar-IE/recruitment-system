@@ -37,18 +37,26 @@ class ProfileController extends Controller
 
         // Update basic profile information
         $jobseeker->update([
-            'phone' => $validated['phone'] ?? null,
+            'first_name' => $validated['first_name'],
+            'middle_name' => $validated['middle_name'] ?? null,
+            'last_name' => $validated['last_name'],
+            'phone' => $validated['phone'],
             'address' => $validated['address'] ?? null,
             'barangay' => $validated['barangay'] ?? null,
-            'city' => $validated['city'] ?? null,
+            'city' => $validated['city'],
             'province' => $validated['province'] ?? null,
             'region' => $validated['region'] ?? null,
             'country' => $validated['country'] ?? null,
-            'birth_date' => $validated['birth_date'] ?? null,
-            'gender' => $validated['gender'] ?? null,
+            'birth_date' => $validated['birth_date'],
+            'gender' => $validated['gender'],
+            'educational_attainment' => $validated['educational_attainment'],
             'bio' => $validated['bio'] ?? null,
             'skills' => $validated['skills'] ?? null,
         ]);
+
+        // Update user's full name for consistency
+        $fullName = trim(($validated['first_name'] ?? '') . ' ' . ($validated['middle_name'] ?? '') . ' ' . ($validated['last_name'] ?? ''));
+        $request->user()->update(['name' => $fullName]);
 
         // Handle education entries
         if (isset($validated['education'])) {

@@ -21,7 +21,7 @@
                             return [
                                 'id' => $application->jobseeker_id,
                                 'job_post_id' => $application->job_post_id,
-                                'name' => $application->jobseeker->user->name ?? 'N/A',
+                                'name' => $application->jobseeker->full_name ?: ($application->jobseeker->user->name ?? 'N/A'),
                                 'job' => $application->jobPost->title ?? 'Job',
                             ];
                         })->values();
