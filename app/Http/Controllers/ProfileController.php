@@ -18,8 +18,26 @@ class ProfileController extends Controller
      */
     public function accountSettings(Request $request): View
     {
+        $user = $request->user();
+        $employer = null;
+        $isOwner = false;
+
+        // Check if main employer
+        if ($user && $user->role === UserRole::Employer) {
+            $employer = $user->employer;
+            $isOwner = true;
+        }
+
+        // Check if employer sub-user
+        if ($user instanceof \App\Models\EmployerSubUser) {
+            $employer = $user->employer;
+            $isOwner = false;
+        }
+
         return view('profile.account-settings', [
-            'user' => $request->user(),
+            'user' => $user,
+            'employer' => $employer,
+            'isOwner' => $isOwner,
         ]);
     }
 
@@ -30,6 +48,8 @@ class ProfileController extends Controller
     {
         $user = $request->user();
         $jobseeker = null;
+        $employer = null;
+        $isOwner = false;
 
         if ($user && $user->role === UserRole::Jobseeker) {
             $jobseeker = Jobseeker::firstOrCreate([
@@ -37,9 +57,23 @@ class ProfileController extends Controller
             ]);
         }
 
+        // Check if main employer
+        if ($user && $user->role === UserRole::Employer) {
+            $employer = $user->employer;
+            $isOwner = true;
+        }
+
+        // Check if employer sub-user
+        if ($user instanceof \App\Models\EmployerSubUser) {
+            $employer = $user->employer;
+            $isOwner = false; // Sub-users are not owners
+        }
+
         return view('profile.edit', [
             'user' => $user,
             'jobseeker' => $jobseeker,
+            'employer' => $employer,
+            'isOwner' => $isOwner,
         ]);
     }
 
@@ -48,13 +82,24 @@ class ProfileController extends Controller
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
-        $request->user()->fill($request->validated());
+        $user = $request->user();
 
-        if ($request->user()->isDirty('email')) {
-            $request->user()->email_verified_at = null;
+        // Handle employer sub-users (they don't have email_verified_at)
+        if ($user instanceof \App\Models\EmployerSubUser) {
+            $user->fill($request->only(['name', 'email']));
+            $user->save();
+
+            return Redirect::route('profile.edit')->with('status', 'profile-updated');
         }
 
-        $request->user()->save();
+        // Handle regular users
+        $user->fill($request->validated());
+
+        if ($user->isDirty('email')) {
+            $user->email_verified_at = null;
+        }
+
+        $user->save();
 
         return Redirect::route('profile.edit')->with('status', 'profile-updated');
     }
@@ -64,14 +109,29 @@ class ProfileController extends Controller
      */
     public function destroy(Request $request): RedirectResponse
     {
+        $user = $request->user();
+
+        // Handle employer sub-users
+        if ($user instanceof \App\Models\EmployerSubUser) {
+            $request->validateWithBag('userDeletion', [
+                'password' => ['required', 'current_password:employer_sub_user'],
+            ]);
+
+            Auth::guard('employer_sub_user')->logout();
+            $user->delete();
+
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return Redirect::to('/');
+        }
+
+        // Handle regular users
         $request->validateWithBag('userDeletion', [
             'password' => ['required', 'current_password'],
         ]);
 
-        $user = $request->user();
-
         Auth::logout();
-
         $user->delete();
 
         $request->session()->invalidate();

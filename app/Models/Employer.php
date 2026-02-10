@@ -19,6 +19,7 @@ class Employer extends Model
         'industry',
         'company_size',
         'address',
+        'company_logo',
         'status',
         'approved_at',
         'suspended_at',

@@ -19,6 +19,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'employer.approved' => \App\Http\Middleware\EnsureEmployerApproved::class,
             'employer.user' => \App\Http\Middleware\EnsureEmployerUser::class,
             'employer.role' => \App\Http\Middleware\EnsureEmployerRole::class,
+            'auth.any' => \App\Http\Middleware\AuthenticateAny::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

@@ -22,6 +22,7 @@ use App\Http\Controllers\Employer\PagesController as EmployerPagesController;
 use App\Http\Controllers\Employer\AtsController as EmployerAtsController;
 use App\Http\Controllers\Employer\NotificationController as EmployerNotificationController;
 use App\Http\Controllers\Employer\SubUserController as EmployerSubUserController;
+use App\Http\Controllers\Employer\CompanyLogoController as EmployerCompanyLogoController;
 use App\Http\Controllers\Jobseeker\DashboardController as JobseekerDashboardController;
 use App\Http\Controllers\Jobseeker\DocumentController as JobseekerDocumentController;
 use App\Http\Controllers\Jobseeker\HistoryController as JobseekerHistoryController;
@@ -213,6 +214,14 @@ Route::middleware('maintenance')->group(function () {
         Route::delete('/sub-users/{subUser}', [EmployerSubUserController::class, 'destroy'])
             ->middleware('employer.role:admin')
             ->name('sub-users.destroy');
+
+        Route::get('/company-settings', [EmployerPagesController::class, 'companySettings'])
+            ->middleware('employer.role:admin,recruiter,viewer')
+            ->name('company-settings');
+        Route::post('/company-logo', [EmployerCompanyLogoController::class, 'update'])
+            ->name('company-logo.update');
+        Route::delete('/company-logo', [EmployerCompanyLogoController::class, 'destroy'])
+            ->name('company-logo.destroy');
     });
 
     // Jobseeker profile completion routes (no profile check required)
@@ -241,7 +250,7 @@ Route::middleware('maintenance')->group(function () {
         Route::get('/notifications/{notification}/read', [JobseekerNotificationController::class, 'markReadAndRedirect'])->name('notifications.read');
     });
 
-    Route::middleware(['auth', 'active'])->group(function () {
+    Route::middleware(['auth.any', 'active'])->group(function () {
         Route::get('/account-settings', [ProfileController::class, 'accountSettings'])->name('profile.settings');
         Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
         Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');

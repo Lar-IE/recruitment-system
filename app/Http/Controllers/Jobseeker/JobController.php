@@ -17,7 +17,7 @@ class JobController extends Controller
 {
     public function index(Request $request): View
     {
-        $query = JobPost::query()
+        $query = JobPost::with('employer')
             ->where('status', 'published')
             ->where(function ($builder) {
                 $builder->whereNull('application_deadline')
@@ -58,6 +58,9 @@ class JobController extends Controller
 
     public function show(Request $request, JobPost $jobPost): View|RedirectResponse
     {
+        // Eager load employer relationship
+        $jobPost->load('employer');
+
         if ($jobPost->status !== 'published') {
             return redirect()->route('jobseeker.jobs')
                 ->withErrors(['job' => __('This job is not published yet.')]);
