@@ -49,4 +49,9 @@ class Employer extends Model
     {
         return $this->hasMany(EmployerSubUser::class);
     }
+
+    public function companyProfile()
+    {
+        return $this->hasOne(CompanyProfile::class);
+    }
 }

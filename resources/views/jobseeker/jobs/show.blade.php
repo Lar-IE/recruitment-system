@@ -27,20 +27,20 @@
                     @if ($jobPost->employer && $jobPost->employer->company_logo)
                         <div class="flex items-center gap-4 pb-4 border-b">
                             <img src="{{ asset('storage/' . $jobPost->employer->company_logo) }}" 
-                                 alt="{{ $jobPost->employer->company_name }}" 
+                                 alt="{{ $jobPost->employer->companyProfile?->company_name ?? $jobPost->employer->company_name }}" 
                                  class="h-16 w-16 object-contain border rounded-lg p-2">
                             <div>
-                                <h3 class="font-semibold text-lg">{{ $jobPost->employer->company_name }}</h3>
-                                @if ($jobPost->employer->industry)
-                                    <p class="text-sm text-gray-500">{{ $jobPost->employer->industry }}</p>
+                                <h3 class="font-semibold text-lg">{{ $jobPost->employer->companyProfile?->company_name ?? $jobPost->employer->company_name }}</h3>
+                                @if ($jobPost->employer->companyProfile?->industry ?? $jobPost->employer->industry)
+                                    <p class="text-sm text-gray-500">{{ $jobPost->employer->companyProfile?->industry ?? $jobPost->employer->industry }}</p>
                                 @endif
                             </div>
                         </div>
                     @else
                         <div class="pb-4 border-b">
-                            <h3 class="font-semibold text-lg">{{ $jobPost->employer->company_name ?? __('N/A') }}</h3>
-                            @if ($jobPost->employer && $jobPost->employer->industry)
-                                <p class="text-sm text-gray-500">{{ $jobPost->employer->industry }}</p>
+                            <h3 class="font-semibold text-lg">{{ $jobPost->employer->companyProfile?->company_name ?? $jobPost->employer->company_name ?? __('N/A') }}</h3>
+                            @if ($jobPost->employer && ($jobPost->employer->companyProfile?->industry ?? $jobPost->employer->industry))
+                                <p class="text-sm text-gray-500">{{ $jobPost->employer->companyProfile?->industry ?? $jobPost->employer->industry }}</p>
                             @endif
                         </div>
                     @endif

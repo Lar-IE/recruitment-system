@@ -37,10 +37,12 @@ class PagesController extends Controller
     {
         $employer = $request->attributes->get('employer');
         $isOwner = $request->attributes->get('employer_owner', false);
+        $profile = $employer->companyProfile;
 
         return view('employer.company-settings', [
             'employer' => $employer,
             'isOwner' => $isOwner,
+            'profile' => $profile,
         ]);
     }
 }

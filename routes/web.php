@@ -23,6 +23,8 @@ use App\Http\Controllers\Employer\AtsController as EmployerAtsController;
 use App\Http\Controllers\Employer\NotificationController as EmployerNotificationController;
 use App\Http\Controllers\Employer\SubUserController as EmployerSubUserController;
 use App\Http\Controllers\Employer\CompanyLogoController as EmployerCompanyLogoController;
+use App\Http\Controllers\Employer\CompanyProfileController as EmployerCompanyProfileController;
+use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\Jobseeker\DashboardController as JobseekerDashboardController;
 use App\Http\Controllers\Jobseeker\DocumentController as JobseekerDocumentController;
 use App\Http\Controllers\Jobseeker\HistoryController as JobseekerHistoryController;
@@ -43,6 +45,9 @@ Route::middleware('maintenance')->group(function () {
         ->name('digital-ids.verify');
     Route::post('/digital-ids/verify/{token}/documents/{type}/download', [DigitalIdVerificationController::class, 'download'])
         ->name('digital-ids.verify.documents.download');
+
+    Route::get('/company/{employer}', [CompanyController::class, 'show'])
+        ->name('company.show');
 
     Route::get('/dashboard', DashboardRedirectController::class)
         ->middleware(['auth', 'verified', 'active'])
@@ -222,6 +227,13 @@ Route::middleware('maintenance')->group(function () {
             ->name('company-logo.update');
         Route::delete('/company-logo', [EmployerCompanyLogoController::class, 'destroy'])
             ->name('company-logo.destroy');
+
+        Route::get('/profile', [EmployerCompanyProfileController::class, 'edit'])
+            ->middleware('employer.role:admin')
+            ->name('profile.edit');
+        Route::put('/profile', [EmployerCompanyProfileController::class, 'update'])
+            ->middleware('employer.role:admin')
+            ->name('profile.update');
     });
 
     // Jobseeker profile completion routes (no profile check required)

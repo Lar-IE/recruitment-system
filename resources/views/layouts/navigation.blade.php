@@ -101,9 +101,13 @@
                         $notificationRoute = 'jobseeker.notifications.read';
                     }
 
-                    $profileRoute = $role === 'jobseeker'
-                        ? 'jobseeker.profile.show'
-                        : 'profile.edit';
+                    if ($role === 'jobseeker') {
+                        $profileRoute = 'jobseeker.profile.show';
+                    } elseif ($isEmployerOwner || $isEmployerSubUser) {
+                        $profileRoute = 'employer.company-settings';
+                    } else {
+                        $profileRoute = 'profile.edit';
+                    }
 
                     $unreadCount = 0;
                     $recentNotifications = collect();

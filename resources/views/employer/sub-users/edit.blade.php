@@ -6,8 +6,8 @@
     </x-slot>
 
     <div class="py-8">
-        <div class="max-w-3xl mx-auto sm:px-6 lg:px-8">
-            <div class="bg-white shadow-sm sm:rounded-lg border border-gray-100 p-6">
+        <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="bg-white shadow-sm sm:rounded-lg border border-gray-100 p-4 sm:p-6">
                 <form method="POST" action="{{ route('employer.sub-users.update', $subUser) }}" class="space-y-5">
                     @csrf
                     @method('PUT')
@@ -49,11 +49,11 @@
                         @error('status') <p class="text-sm text-red-600 mt-1">{{ $message }}</p> @enderror
                     </div>
 
-                    <div class="flex items-center justify-end gap-3">
-                        <a href="{{ route('employer.sub-users.index') }}" class="text-gray-600 hover:text-gray-900">
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3">
+                        <a href="{{ route('employer.sub-users.index') }}" class="text-center sm:text-left text-gray-600 hover:text-gray-900 py-2 sm:py-0">
                             {{ __('Cancel') }}
                         </a>
-                        <button class="inline-flex items-center px-4 py-2 bg-indigo-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-indigo-500">
+                        <button class="inline-flex items-center justify-center px-4 py-2 bg-indigo-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-indigo-500">
                             {{ __('Save Changes') }}
                         </button>
                     </div>

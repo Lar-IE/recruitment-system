@@ -6,10 +6,10 @@
     </x-slot>
 
     <div class="py-8">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
-            <div class="flex items-center justify-between">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <h3 class="text-lg font-semibold text-gray-800">{{ __('Team Members') }}</h3>
-                <a href="{{ route('employer.sub-users.create') }}" class="inline-flex items-center px-4 py-2 bg-indigo-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-indigo-500">
+                <a href="{{ route('employer.sub-users.create') }}" class="inline-flex items-center justify-center px-4 py-2 bg-indigo-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-indigo-500">
                     {{ __('Add Sub-User') }}
                 </a>
             </div>
@@ -21,44 +21,47 @@
             @endif
 
             <div class="bg-white shadow-sm sm:rounded-lg border border-gray-100 overflow-hidden">
-                <table class="min-w-full text-sm">
+                <div class="overflow-x-auto">
+                    <table class="min-w-full text-sm">
                     <thead class="bg-gray-50 text-gray-600">
                         <tr>
-                            <th class="px-4 py-3 text-left font-medium">{{ __('Name') }}</th>
-                            <th class="px-4 py-3 text-left font-medium">{{ __('Email') }}</th>
-                            <th class="px-4 py-3 text-left font-medium">{{ __('Role') }}</th>
-                            <th class="px-4 py-3 text-left font-medium">{{ __('Status') }}</th>
-                            <th class="px-4 py-3 text-right font-medium">{{ __('Actions') }}</th>
+                            <th class="px-4 py-3 text-left font-medium whitespace-nowrap">{{ __('Name') }}</th>
+                            <th class="px-4 py-3 text-left font-medium whitespace-nowrap">{{ __('Email') }}</th>
+                            <th class="px-4 py-3 text-left font-medium whitespace-nowrap">{{ __('Role') }}</th>
+                            <th class="px-4 py-3 text-left font-medium whitespace-nowrap">{{ __('Status') }}</th>
+                            <th class="px-4 py-3 text-right font-medium whitespace-nowrap">{{ __('Actions') }}</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100">
                         @forelse ($subUsers as $subUser)
                             <tr>
-                                <td class="px-4 py-3 text-gray-800">{{ $subUser->name }}</td>
-                                <td class="px-4 py-3 text-gray-600">{{ $subUser->email }}</td>
-                                <td class="px-4 py-3 text-gray-600 capitalize">{{ $subUser->role?->value }}</td>
-                                <td class="px-4 py-3">
+                                <td class="px-4 py-3 text-gray-800 whitespace-nowrap">{{ $subUser->name }}</td>
+                                <td class="px-4 py-3 text-gray-600 whitespace-nowrap">{{ $subUser->email }}</td>
+                                <td class="px-4 py-3 text-gray-600 capitalize whitespace-nowrap">{{ $subUser->role?->value }}</td>
+                                <td class="px-4 py-3 whitespace-nowrap">
                                     <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium {{ $subUser->status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600' }}">
                                         {{ ucfirst($subUser->status) }}
                                     </span>
                                 </td>
-                                <td class="px-4 py-3 text-right space-x-2">
-                                    <a href="{{ route('employer.sub-users.edit', $subUser) }}" class="text-indigo-600 hover:text-indigo-800">
-                                        {{ __('Edit') }}
-                                    </a>
-                                    <form action="{{ route('employer.sub-users.toggle-status', $subUser) }}" method="POST" class="inline">
-                                        @csrf
-                                        <button class="text-gray-600 hover:text-gray-900">
-                                            {{ $subUser->status === 'active' ? __('Deactivate') : __('Activate') }}
-                                        </button>
-                                    </form>
-                                    <form action="{{ route('employer.sub-users.destroy', $subUser) }}" method="POST" class="inline" onsubmit="return confirm('{{ __('Delete this sub-user?') }}')">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button class="text-red-600 hover:text-red-800">
-                                            {{ __('Delete') }}
-                                        </button>
-                                    </form>
+                                <td class="px-4 py-3 text-right whitespace-nowrap">
+                                    <div class="flex items-center justify-end gap-2">
+                                        <a href="{{ route('employer.sub-users.edit', $subUser) }}" class="text-indigo-600 hover:text-indigo-800 text-sm">
+                                            {{ __('Edit') }}
+                                        </a>
+                                        <form action="{{ route('employer.sub-users.toggle-status', $subUser) }}" method="POST" class="inline">
+                                            @csrf
+                                            <button class="text-gray-600 hover:text-gray-900 text-sm">
+                                                {{ $subUser->status === 'active' ? __('Deactivate') : __('Activate') }}
+                                            </button>
+                                        </form>
+                                        <form action="{{ route('employer.sub-users.destroy', $subUser) }}" method="POST" class="inline" onsubmit="return confirm('{{ __('Delete this sub-user?') }}')">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button class="text-red-600 hover:text-red-800 text-sm">
+                                                {{ __('Delete') }}
+                                            </button>
+                                        </form>
+                                    </div>
                                 </td>
                             </tr>
                         @empty
@@ -69,7 +72,8 @@
                             </tr>
                         @endforelse
                     </tbody>
-                </table>
+                    </table>
+                </div>
             </div>
 
             <div>

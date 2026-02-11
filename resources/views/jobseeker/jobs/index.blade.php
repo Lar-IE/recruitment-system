@@ -48,13 +48,13 @@
                                     <div class="flex items-start gap-4">
                                         @if ($jobPost->employer && $jobPost->employer->company_logo)
                                             <img src="{{ asset('storage/' . $jobPost->employer->company_logo) }}" 
-                                                 alt="{{ $jobPost->employer->company_name }}" 
+                                                 alt="{{ $jobPost->employer->companyProfile?->company_name ?? $jobPost->employer->company_name }}" 
                                                  class="h-12 w-12 object-contain flex-shrink-0 border rounded p-1">
                                         @endif
                                         <div>
                                             <h3 class="text-lg font-semibold">{{ $jobPost->title }}</h3>
                                             <p class="text-sm text-gray-500">
-                                                {{ $jobPost->employer->company_name ?? __('N/A') }}
+                                                {{ $jobPost->employer->companyProfile?->company_name ?? $jobPost->employer->company_name ?? __('N/A') }}
                                             </p>
                                             <p class="text-sm text-gray-500">
                                                 {{ $jobPost->location ?? __('Remote') }} · {{ Str::of($jobPost->job_type)->replace('_', ' ')->title() }}

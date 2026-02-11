@@ -17,7 +17,7 @@ class JobController extends Controller
 {
     public function index(Request $request): View
     {
-        $query = JobPost::with('employer')
+        $query = JobPost::with('employer.companyProfile')
             ->where('status', 'published')
             ->where(function ($builder) {
                 $builder->whereNull('application_deadline')
@@ -40,14 +40,7 @@ class JobController extends Controller
 
         $jobPosts = $query->latest('published_at')->paginate(10)->withQueryString();
 
-        $jobseeker = $request->user()->jobseeker;
-        $applications = collect();
-
-        if ($jobseeker) {
-            $applications = Application::where('jobseeker_id', $jobseeker->id)
-                ->get()
-                ->keyBy('job_post_id');
-        }
+        $applications = $this->getApplicationsForCurrentJobseeker($request);
 
         return view('jobseeker.jobs.index', [
             'jobPosts' => $jobPosts,
@@ -58,8 +51,8 @@ class JobController extends Controller
 
     public function show(Request $request, JobPost $jobPost): View|RedirectResponse
     {
-        // Eager load employer relationship
-        $jobPost->load('employer');
+        // Eager load employer relationship with company profile
+        $jobPost->load('employer.companyProfile');
 
         if ($jobPost->status !== 'published') {
             return redirect()->route('jobseeker.jobs')
@@ -71,9 +64,9 @@ class JobController extends Controller
                 ->withErrors(['job' => __('The application deadline has passed.')]);
         }
 
-        $jobseeker = $request->user()->jobseeker;
         $application = null;
 
+        $jobseeker = $request->user()->jobseeker;
         if ($jobseeker) {
             $application = Application::where('jobseeker_id', $jobseeker->id)
                 ->where('job_post_id', $jobPost->id)
@@ -134,5 +127,18 @@ class JobController extends Controller
 
         return redirect()->route('jobseeker.jobs.show', $jobPost)
             ->with('success', __('Application submitted.'));
+    }
+
+    private function getApplicationsForCurrentJobseeker(Request $request)
+    {
+        $jobseeker = $request->user()->jobseeker;
+
+        if (! $jobseeker) {
+            return collect();
+        }
+
+        return Application::where('jobseeker_id', $jobseeker->id)
+            ->get()
+            ->keyBy('job_post_id');
     }
 }
