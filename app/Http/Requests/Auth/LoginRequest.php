@@ -41,13 +41,12 @@ class LoginRequest extends FormRequest
     {
         $this->ensureIsNotRateLimited();
 
-        if (Auth::attempt($this->only('email', 'password'), $this->boolean('remember'))) {
-            RateLimiter::clear($this->throttleKey());
+        $credentials = $this->only('email', 'password');
+        $remember = $this->boolean('remember');
 
-            return 'web';
-        }
-
-        if (Auth::guard('employer_sub_user')->attempt($this->only('email', 'password'), $this->boolean('remember'))) {
+        // Try employer sub-user first so that sub-user accounts (including when the same
+        // email exists in both users and employer_sub_users) log in as sub-user.
+        if (Auth::guard('employer_sub_user')->attempt($credentials, $remember)) {
             $subUser = Auth::guard('employer_sub_user')->user();
             $employer = $subUser?->employer;
 
@@ -63,6 +62,12 @@ class LoginRequest extends FormRequest
             RateLimiter::clear($this->throttleKey());
 
             return 'employer_sub_user';
+        }
+
+        if (Auth::attempt($credentials, $remember)) {
+            RateLimiter::clear($this->throttleKey());
+
+            return 'web';
         }
 
         RateLimiter::hit($this->throttleKey());

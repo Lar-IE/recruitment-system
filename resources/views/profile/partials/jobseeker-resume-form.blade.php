@@ -209,8 +209,11 @@
 
             <!-- Work Experience Section -->
             <div>
-                <div class="flex justify-between items-center mb-3">
-                    <x-input-label :value="__('Work Experience')" />
+                <div class="flex justify-between items-start gap-4 mb-3">
+                    <div>
+                        <x-input-label :value="__('Work Experience')" />
+                        <p class="mt-1 text-sm text-gray-600">{{ __('Work experience is required. If you have no experience yet, please enter N/A in Company Name and Position.') }}</p>
+                    </div>
                     <button type="button" id="addWorkExperience" class="inline-flex items-center px-3 py-1.5 bg-indigo-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-indigo-700 focus:bg-indigo-700 active:bg-indigo-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150">
                         + {{ __('Add Work Experience') }}
                     </button>
@@ -230,12 +233,16 @@
                             $position = $isArray ? ($experience['position'] ?? '') : ($experience?->position ?? '');
                             $expStartDate = $isArray ? ($experience['start_date'] ?? '') : ($experience?->start_date?->format('Y-m-d') ?? '');
                             $expEndDate = $isArray ? ($experience['end_date'] ?? '') : ($experience?->end_date?->format('Y-m-d') ?? '');
-                            $isCurrent = $isArray ? ($experience['is_current'] ?? false) : ($experience?->is_current ?? false);
                             $expDescription = $isArray ? ($experience['description'] ?? '') : ($experience?->description ?? '');
                         @endphp
                         <div class="work-experience-item border border-gray-300 rounded-lg p-4 bg-gray-50">
-                            <div class="flex justify-between items-center mb-3">
-                                <h4 class="font-semibold text-sm text-gray-700">{{ __('Work Experience') }} #{{ $index + 1 }}</h4>
+                            <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                                <div class="flex items-center gap-2">
+                                    <h4 class="font-semibold text-sm text-gray-700">{{ __('Work Experience') }} #{{ $index + 1 }}</h4>
+                                    @if ($index === 0)
+                                        <span class="current-recent-job-tag inline-flex items-center rounded-md bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700">{{ __('Current / Recent Job') }}</span>
+                                    @endif
+                                </div>
                                 @if($index > 0 || count($workExperiences) > 1)
                                     <button type="button" class="remove-work-experience text-red-600 hover:text-red-800 text-sm font-medium">{{ __('Remove') }}</button>
                                 @endif
@@ -262,12 +269,6 @@
                                     <x-input-error class="mt-2" :messages="$errors->get('work_experience.'.$index.'.end_date')" />
                                 </div>
                                 <div class="md:col-span-2">
-                                    <label class="inline-flex items-center">
-                                        <input type="checkbox" name="work_experience[{{ $index }}][is_current]" value="1" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500 current-job-checkbox" {{ $isCurrent ? 'checked' : '' }}>
-                                        <span class="ml-2 text-sm text-gray-600">{{ __('I currently work here') }}</span>
-                                    </label>
-                                </div>
-                                <div class="md:col-span-2">
                                     <x-input-label :value="__('Description (Optional)')" />
                                     <textarea name="work_experience[{{ $index }}][description]" rows="3" class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm" placeholder="{{ __('e.g., Key responsibilities and achievements') }}">{{ $expDescription }}</textarea>
                                     <x-input-error class="mt-2" :messages="$errors->get('work_experience.'.$index.'.description')" />
@@ -278,10 +279,40 @@
                 </div>
             </div>
 
-            <div>
-                <x-input-label for="skills" :value="__('Skills')" />
-                <textarea id="skills" name="skills" rows="4" class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm" placeholder="{{ __('One skill per line') }}">{{ old('skills', $jobseeker->skills) }}</textarea>
+            <div x-data="skillsManager(
+                @js($jobseeker->skillsList->map(fn($s) => ['skill_name' => $s->skill_name, 'proficiency_percentage' => $s->proficiency_percentage])->values()->all()),
+                @js(old('skills', []))
+            )">
+                <x-input-label :value="__('Skills')" />
+                <p class="mt-1 text-sm text-gray-600">{{ __('Add skills and indicate your proficiency level (0–100%).') }}</p>
+                <template x-for="(skill, index) in skills" :key="index">
+                    <div class="mt-3 flex flex-wrap gap-3 items-end p-3 rounded-lg border border-gray-200 bg-gray-50/50">
+                        <div class="flex-1 min-w-[160px]">
+                            <x-input-label :value="__('Skill name')" class="sr-only" />
+                            <input type="text" x-model="skill.skill_name" :name="'skills[' + index + '][skill_name]'" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" placeholder="{{ __('e.g., PHP, Project Management') }}" />
+                        </div>
+                        <div class="w-32">
+                            <x-input-label :value="__('Proficiency %')" class="sr-only" />
+                            <input type="number" x-model.number="skill.proficiency_percentage" :name="'skills[' + index + '][proficiency_percentage]'" min="0" max="100" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" placeholder="0–100" />
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-sm text-gray-500" x-text="skill.proficiency_percentage + '%'" x-show="skill.proficiency_percentage !== ''"></span>
+                            <button type="button" @click="removeSkill(index)" class="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md transition" title="{{ __('Remove') }}">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                </template>
+                <div class="mt-3">
+                    <button type="button" @click="addSkill()" class="inline-flex items-center gap-2 text-sm font-medium text-indigo-600 hover:text-indigo-900">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+                        {{ __('Add skill') }}
+                    </button>
+                </div>
                 <x-input-error class="mt-2" :messages="$errors->get('skills')" />
+                @foreach ($errors->get('skills.*') as $msg)
+                    <p class="mt-2 text-sm text-red-600">{{ $msg }}</p>
+                @endforeach
             </div>
 
             <div class="flex items-center gap-4">
@@ -292,6 +323,30 @@
 </section>
 
 <script>
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('skillsManager', (initialSkills = [], oldSkills = []) => {
+            const resolved = Array.isArray(oldSkills) && oldSkills.length > 0
+                ? oldSkills
+                : (Array.isArray(initialSkills) && initialSkills.length > 0
+                    ? initialSkills.map(s => ({
+                        skill_name: s.skill_name ?? s.skill ?? '',
+                        proficiency_percentage: s.proficiency_percentage ?? 50,
+                    }))
+                    : [{ skill_name: '', proficiency_percentage: 50 }]);
+            return {
+                skills: resolved,
+            addSkill() {
+                this.skills.push({ skill_name: '', proficiency_percentage: 50 });
+            },
+            removeSkill(index) {
+                this.skills.splice(index, 1);
+                if (this.skills.length === 0) {
+                    this.skills.push({ skill_name: '', proficiency_percentage: 50 });
+                }
+            }
+            };
+        });
+    });
     (function () {
         const regionSelect = document.getElementById('region');
         const provinceSelect = document.getElementById('province');
@@ -576,12 +631,6 @@
                             <input type="date" name="work_experience[${index}][end_date]" class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm end-date-input" />
                         </div>
                         <div class="md:col-span-2">
-                            <label class="inline-flex items-center">
-                                <input type="checkbox" name="work_experience[${index}][is_current]" value="1" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500 current-job-checkbox">
-                                <span class="ml-2 text-sm text-gray-600">{{ __('I currently work here') }}</span>
-                            </label>
-                        </div>
-                        <div class="md:col-span-2">
                             <label class="block font-medium text-sm text-gray-700">{{ __('Description (Optional)') }}</label>
                             <textarea name="work_experience[${index}][description]" rows="3" class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm" placeholder="{{ __('e.g., Key responsibilities and achievements') }}"></textarea>
                         </div>
@@ -597,7 +646,6 @@
             workExperienceContainer.appendChild(newItem.firstElementChild);
             workExperienceIndex++;
             updateWorkExperienceNumbers();
-            attachCurrentJobCheckboxHandler();
         });
 
         workExperienceContainer.addEventListener('click', function(e) {
@@ -610,26 +658,23 @@
         function updateWorkExperienceNumbers() {
             const items = workExperienceContainer.querySelectorAll('.work-experience-item');
             items.forEach((item, index) => {
-                item.querySelector('h4').textContent = '{{ __('Work Experience') }} #' + (index + 1);
-            });
-        }
-
-        // Handle "I currently work here" checkbox
-        function attachCurrentJobCheckboxHandler() {
-            document.querySelectorAll('.current-job-checkbox').forEach(checkbox => {
-                checkbox.addEventListener('change', function() {
-                    const endDateInput = this.closest('.work-experience-item').querySelector('.end-date-input');
-                    if (this.checked) {
-                        endDateInput.value = '';
-                        endDateInput.disabled = true;
-                    } else {
-                        endDateInput.disabled = false;
+                const titleEl = item.querySelector('h4');
+                if (titleEl) {
+                    titleEl.textContent = '{{ __('Work Experience') }} #' + (index + 1);
+                }
+                // Keep "Current / Recent Job" tag only on first item (add if missing, remove from others)
+                const tag = item.querySelector('.current-recent-job-tag');
+                if (index === 0) {
+                    if (!tag) {
+                        const span = document.createElement('span');
+                        span.className = 'current-recent-job-tag inline-flex items-center rounded-md bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700';
+                        span.textContent = '{{ __("Current / Recent Job") }}';
+                        titleEl?.insertAdjacentElement('afterend', span);
                     }
-                });
+                } else if (tag) {
+                    tag.remove();
+                }
             });
         }
-
-        // Initialize on page load
-        attachCurrentJobCheckboxHandler();
     })();
 </script>

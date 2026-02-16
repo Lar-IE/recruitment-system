@@ -6,15 +6,19 @@
     $location = collect([$jobseeker->barangay, $jobseeker->city, $jobseeker->province, $jobseeker->region, $jobseeker->country])
         ->filter()
         ->implode(', ');
-    $educationItems = collect(preg_split("/\r\n|\r|\n/", $jobseeker->education ?? ''))
+    // Legacy text fields (fallback when no structured education/experience records)
+    $educationItemsLegacy = collect(preg_split("/\r\n|\r|\n/", $jobseeker->education ?? ''))
         ->map(fn ($item) => trim($item))
         ->filter();
-    $experienceItems = collect(preg_split("/\r\n|\r|\n/", $jobseeker->experience ?? ''))
+    $experienceItemsLegacy = collect(preg_split("/\r\n|\r|\n/", $jobseeker->experience ?? ''))
         ->map(fn ($item) => trim($item))
         ->filter();
     $skillItems = collect(preg_split("/\r\n|\r|\n/", $jobseeker->skills ?? ''))
         ->map(fn ($item) => trim($item))
         ->filter();
+    $skillsWithProficiency = $jobseeker->skillsList->isNotEmpty()
+        ? $jobseeker->skillsList
+        : $skillItems->map(fn ($name) => (object)['skill_name' => $name, 'proficiency_percentage' => null]);
 
     $statusStyles = [
         'new' => 'bg-blue-100 text-blue-700 ring-blue-200',
@@ -27,9 +31,10 @@
     ];
     $statusKey = $application->current_status;
     $statusClass = $statusStyles[$statusKey] ?? 'bg-gray-100 text-gray-700 ring-gray-200';
-    $educationSummary = Str::of($jobseeker->education ?? '')
-        ->before("\n")
-        ->trim();
+    $firstEducation = $jobseeker->educations->first();
+    $educationSummary = $firstEducation
+        ? ($firstEducation->degree ? $firstEducation->degree . ' - ' : '') . $firstEducation->institution
+        : Str::of($jobseeker->education ?? '')->before("\n")->trim();
     $age = $jobseeker->birth_date?->age;
 @endphp
 <x-app-layout>
@@ -95,36 +100,86 @@
                                 <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-700">
                                     <div>
                                         <p class="font-semibold text-gray-800">{{ __('Education') }}</p>
-                                        @if ($educationItems->isEmpty())
-                                            <p class="mt-1 text-sm text-gray-500">{{ __('No education entries.') }}</p>
-                                        @else
+                                        @if ($jobseeker->educations->isNotEmpty())
+                                            <ul class="mt-2 space-y-3 list-none pl-0">
+                                                @foreach ($jobseeker->educations as $edu)
+                                                    <li class="border-l-2 border-gray-200 pl-3">
+                                                        <p class="font-medium text-gray-800">{{ $edu->institution }}</p>
+                                                        @if ($edu->degree || $edu->field_of_study)
+                                                            <p class="text-gray-600">{{ trim(implode(', ', array_filter([$edu->degree, $edu->field_of_study]))) }}</p>
+                                                        @endif
+                                                        @if ($edu->start_date || $edu->end_date)
+                                                            <p class="text-xs text-gray-500">
+                                                                {{ $edu->start_date?->format('M Y') ?? '?' }} – {{ $edu->end_date?->format('M Y') ?? '?' }}
+                                                            </p>
+                                                        @endif
+                                                        @if ($edu->description)
+                                                            <p class="mt-1 text-gray-600 whitespace-pre-line">{{ $edu->description }}</p>
+                                                        @endif
+                                                    </li>
+                                                @endforeach
+                                            </ul>
+                                        @elseif ($educationItemsLegacy->isNotEmpty())
                                             <ul class="mt-2 list-disc list-inside space-y-1">
-                                                @foreach ($educationItems as $item)
+                                                @foreach ($educationItemsLegacy as $item)
                                                     <li>{{ $item }}</li>
                                                 @endforeach
                                             </ul>
+                                        @else
+                                            <p class="mt-1 text-sm text-gray-500">{{ __('No education entries.') }}</p>
                                         @endif
                                     </div>
                                     <div>
                                         <p class="font-semibold text-gray-800">{{ __('Work Experience') }}</p>
-                                        @if ($experienceItems->isEmpty())
-                                            <p class="mt-1 text-sm text-gray-500">{{ __('No experience entries.') }}</p>
-                                        @else
+                                        @if ($jobseeker->workExperiences->isNotEmpty())
+                                            <ul class="mt-2 space-y-3 list-none pl-0">
+                                                @foreach ($jobseeker->workExperiences as $exp)
+                                                    <li class="border-l-2 border-gray-200 pl-3">
+                                                        <p class="font-medium text-gray-800">{{ $exp->company }}</p>
+                                                        @if ($exp->position)
+                                                            <p class="text-gray-600">{{ $exp->position }}</p>
+                                                        @endif
+                                                        @if ($exp->start_date || $exp->end_date)
+                                                            <p class="text-xs text-gray-500">
+                                                                {{ $exp->start_date?->format('M Y') ?? '?' }} – {{ $exp->is_current ? __('Present') : ($exp->end_date?->format('M Y') ?? '?') }}
+                                                            </p>
+                                                        @endif
+                                                        @if ($exp->description)
+                                                            <p class="mt-1 text-gray-600 whitespace-pre-line">{{ $exp->description }}</p>
+                                                        @endif
+                                                    </li>
+                                                @endforeach
+                                            </ul>
+                                        @elseif ($experienceItemsLegacy->isNotEmpty())
                                             <ul class="mt-2 list-disc list-inside space-y-1">
-                                                @foreach ($experienceItems as $item)
+                                                @foreach ($experienceItemsLegacy as $item)
                                                     <li>{{ $item }}</li>
                                                 @endforeach
                                             </ul>
+                                        @else
+                                            <p class="mt-1 text-sm text-gray-500">{{ __('No experience entries.') }}</p>
                                         @endif
                                     </div>
                                     <div class="md:col-span-2">
                                         <p class="font-semibold text-gray-800">{{ __('Skills') }}</p>
-                                        @if ($skillItems->isEmpty())
+                                        @if ($skillsWithProficiency->isEmpty())
                                             <p class="mt-1 text-sm text-gray-500">{{ __('No skills listed.') }}</p>
                                         @else
-                                            <div class="mt-2 flex flex-wrap gap-2">
-                                                @foreach ($skillItems as $item)
-                                                    <span class="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs text-gray-700">{{ $item }}</span>
+                                            <div class="mt-2 space-y-3">
+                                                @foreach ($skillsWithProficiency as $skill)
+                                                    <div>
+                                                        <div class="flex items-center justify-between text-sm mb-1">
+                                                            <span class="font-medium text-gray-800">{{ is_object($skill) ? $skill->skill_name : $skill }}</span>
+                                                            @if (is_object($skill) && $skill->proficiency_percentage !== null)
+                                                                <span class="text-gray-500">{{ $skill->proficiency_percentage }}%</span>
+                                                            @endif
+                                                        </div>
+                                                        @if (is_object($skill) && $skill->proficiency_percentage !== null)
+                                                            <div class="h-2 bg-gray-200 rounded-full overflow-hidden">
+                                                                <div class="h-full bg-indigo-600 rounded-full transition-all" style="width: {{ min(100, max(0, $skill->proficiency_percentage)) }}%"></div>
+                                                            </div>
+                                                        @endif
+                                                    </div>
                                                 @endforeach
                                             </div>
                                         @endif
@@ -162,7 +217,7 @@
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                     <div class="p-6 text-gray-900 space-y-4">
-                        <h4 class="text-lg font-semibold">{{ __('Application Details') }}</h4>
+                        <h4 class="text-lg font-semibold">{{ __('Applied Job/Position') }}</h4>
                         <p class="text-sm text-gray-600">
                             {{ __('Job: :title', ['title' => $application->jobPost->title ?? __('N/A')]) }}
                         </p>
@@ -173,6 +228,14 @@
                             <div class="text-sm text-gray-700 whitespace-pre-line border rounded-lg p-3 bg-gray-50">
                                 {{ $application->cover_letter }}
                             </div>
+                        @endif
+                        @if ($application->cover_letter_file)
+                            <p class="text-sm mt-2">
+                                <a href="{{ asset('storage/' . $application->cover_letter_file) }}" target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 text-indigo-600 hover:text-indigo-900 font-medium">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                                    {{ __('Download cover letter (PDF/Word)') }}
+                                </a>
+                            </p>
                         @endif
                     </div>
                 </div>
@@ -348,21 +411,21 @@
                         @if ($otherApplications->isEmpty())
                             <p class="text-sm text-gray-500">{{ __('No other applications found.') }}</p>
                         @else
-                            <div class="overflow-x-auto">
-                                <table class="min-w-full text-sm">
-                                    <thead class="text-left text-gray-500">
+                            <div class="overflow-x-auto -mx-6 sm:mx-0 lg:mx-0 lg:overflow-visible">
+                                <table class="w-full min-w-[1000px] lg:min-w-0 text-sm">
+                                    <thead class="text-left text-gray-500 whitespace-nowrap bg-gray-50/80">
                                         <tr>
-                                            <th class="py-2 pr-4">{{ __('Job Title') }}</th>
-                                            <th class="py-2 pr-4">{{ __('Status') }}</th>
-                                            <th class="py-2 pr-4">{{ __('Applied At') }}</th>
+                                            <th class="py-3 px-4">{{ __('Job Title') }}</th>
+                                            <th class="py-3 px-4">{{ __('Status') }}</th>
+                                            <th class="py-3 px-4">{{ __('Applied At') }}</th>
                                         </tr>
                                     </thead>
                                     <tbody class="text-gray-700">
                                         @foreach ($otherApplications as $other)
-                                            <tr class="border-t">
-                                                <td class="py-2 pr-4">{{ $other->jobPost->title ?? __('N/A') }}</td>
-                                                <td class="py-2 pr-4">{{ $statuses[$other->current_status] ?? ucfirst($other->current_status) }}</td>
-                                                <td class="py-2 pr-4">{{ $other->applied_at?->format('M d, Y') }}</td>
+                                            <tr class="border-t align-top">
+                                                <td class="py-3 px-4">{{ $other->jobPost->title ?? __('N/A') }}</td>
+                                                <td class="py-3 px-4 whitespace-nowrap">{{ $statuses[$other->current_status] ?? ucfirst($other->current_status) }}</td>
+                                                <td class="py-3 px-4 whitespace-nowrap">{{ $other->applied_at?->format('M d, Y') }}</td>
                                             </tr>
                                         @endforeach
                                     </tbody>

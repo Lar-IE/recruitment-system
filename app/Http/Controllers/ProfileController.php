@@ -79,6 +79,8 @@ class ProfileController extends Controller
 
     /**
      * Update the user's profile information.
+     * Redirects back to the page the user came from (Profile or Account Settings)
+     * so they do not see both pages merged after saving.
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
@@ -89,7 +91,7 @@ class ProfileController extends Controller
             $user->fill($request->only(['name', 'email']));
             $user->save();
 
-            return Redirect::route('profile.edit')->with('status', 'profile-updated');
+            return redirect()->back()->with('status', 'profile-updated');
         }
 
         // Handle regular users
@@ -101,7 +103,7 @@ class ProfileController extends Controller
 
         $user->save();
 
-        return Redirect::route('profile.edit')->with('status', 'profile-updated');
+        return redirect()->back()->with('status', 'profile-updated');
     }
 
     /**

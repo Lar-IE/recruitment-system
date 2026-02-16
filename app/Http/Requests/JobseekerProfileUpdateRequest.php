@@ -28,8 +28,12 @@ class JobseekerProfileUpdateRequest extends FormRequest
             'gender' => ['required', 'string', 'in:Male,Female,Other,Prefer not to say'],
             'educational_attainment' => ['required', 'string', 'in:Elementary Graduate,High School Graduate,Vocational Graduate,College Undergraduate,College Graduate,Post Graduate'],
             'bio' => ['nullable', 'string', 'max:2000'],
-            'skills' => ['nullable', 'string', 'max:4000'],
-            
+
+            // Skills with proficiency (0-100%)
+            'skills' => ['nullable', 'array'],
+            'skills.*.skill_name' => ['required', 'string', 'max:255'],
+            'skills.*.proficiency_percentage' => ['required', 'integer', 'min:0', 'max:100'],
+
             // Education array validation
             'education' => ['nullable', 'array'],
             'education.*.institution' => ['required', 'string', 'max:255'],
@@ -45,7 +49,6 @@ class JobseekerProfileUpdateRequest extends FormRequest
             'work_experience.*.position' => ['nullable', 'string', 'max:255'],
             'work_experience.*.start_date' => ['nullable', 'date'],
             'work_experience.*.end_date' => ['nullable', 'date'],
-            'work_experience.*.is_current' => ['nullable', 'boolean'],
             'work_experience.*.description' => ['nullable', 'string', 'max:1000'],
         ];
     }

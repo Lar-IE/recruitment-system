@@ -9,7 +9,7 @@
     </x-slot>
 
     <div class="py-8">
-        <div class="max-w-screen-2xl mx-auto sm:px-6 lg:px-8 space-y-6">
+        <div class="w-full px-4 sm:px-6 lg:px-8 space-y-6">
             @php
                 $user = Auth::user();
                 $isEmployerOwner = request()->attributes->get('employer_owner', false);
@@ -82,11 +82,27 @@
                         @endforeach
                     </select>
                 </div>
+                <div>
+                    <x-input-label for="age_range" :value="__('Age')" />
+                    <select id="age_range" name="age_range" class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+                        <option value="">{{ __('All') }}</option>
+                        <option value="18-24" {{ ($filters['age_range'] ?? '') === '18-24' ? 'selected' : '' }}>18–24</option>
+                        <option value="25-34" {{ ($filters['age_range'] ?? '') === '25-34' ? 'selected' : '' }}>25–34</option>
+                        <option value="35-44" {{ ($filters['age_range'] ?? '') === '35-44' ? 'selected' : '' }}>35–44</option>
+                        <option value="45-54" {{ ($filters['age_range'] ?? '') === '45-54' ? 'selected' : '' }}>45–54</option>
+                        <option value="55+" {{ ($filters['age_range'] ?? '') === '55+' ? 'selected' : '' }}>55+</option>
+                    </select>
+                </div>
                 <div class="min-w-[220px]">
                     <x-input-label for="search" :value="__('Search')" />
-                    <x-text-input id="search" name="search" class="mt-1 block w-full" :value="old('search', $filters['search'] ?? '')" placeholder="{{ __('Name, email, phone, city, job') }}" />
+                    <x-text-input id="search" name="search" class="mt-1 block w-full" :value="old('search', $filters['search'] ?? '')" placeholder="{{ __('Name, email, phone, city, job, current job, age') }}" />
                 </div>
-                <x-primary-button>{{ __('Search') }}</x-primary-button>
+                <div class="flex items-center gap-2">
+                    <x-primary-button>{{ __('Search') }}</x-primary-button>
+                    <a href="{{ route('employer.applicants') }}" class="text-sm text-gray-600 hover:text-gray-900">
+                        {{ __('Reset') }}
+                    </a>
+                </div>
             </form>
 
             @if ($canUpdateStatus)
@@ -100,14 +116,34 @@
                 </div>
             @endif
 
-            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg" x-data>
+            <div class="bg-white overflow-hidden lg:overflow-visible shadow-sm sm:rounded-lg" x-data>
                         <div class="p-6 text-gray-900">
+                    @php
+                        $searchTerm = $filters['search'] ?? '';
+                        $highlightSearch = function ($text) use ($searchTerm) {
+                            if ($searchTerm === '' || $text === null || $text === '') {
+                                return e((string) $text);
+                            }
+                            $escaped = e((string) $text);
+                            $pattern = '/'.preg_quote(e($searchTerm), '/').'/iu';
+                            return preg_replace($pattern, '<mark class="bg-amber-200 dark:bg-amber-400/40 rounded px-0.5">$0</mark>', $escaped);
+                        };
+                    @endphp
+                    @if (!empty($searchTerm))
+                        <div class="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                            @if ($applications->isEmpty())
+                                {{ __('No results found for') }} "<strong>{{ e($searchTerm) }}</strong>".
+                            @else
+                                {{ $applications->total() }} {{ $applications->total() === 1 ? __('result') : __('results') }} {{ __('found for') }} "<strong>{{ e($searchTerm) }}</strong>".
+                            @endif
+                        </div>
+                    @endif
                     @if ($applications->isEmpty())
                         <p class="text-sm text-gray-500">{{ __('No applicants found.') }}</p>
                     @else
-                        <div class="overflow-x-auto">
-                            <table class="min-w-[1400px] text-sm">
-                                <thead class="text-left text-gray-500 whitespace-nowrap">
+                        <div class="overflow-x-auto -mx-6 sm:mx-0 lg:mx-0 lg:overflow-visible">
+                            <table class="w-full min-w-[1000px] lg:min-w-0 text-sm">
+                                <thead class="text-left text-gray-500 whitespace-nowrap bg-gray-50/80">
                                     <tr>
                                         @php
                                             $sortLink = function ($key) use ($filters, $currentSort, $currentDir) {
@@ -121,52 +157,57 @@
                                                 return $currentDir === 'asc' ? '▲' : '▼';
                                             };
                                         @endphp
-                                        <th class="py-2 pr-4">
+                                        <th class="py-3 px-4">
                                             <a href="{{ $sortLink('name') }}" class="inline-flex items-center gap-1 text-gray-600 hover:text-gray-900">
                                                 {{ __('Name') }} <span class="text-[10px]">{{ $sortIcon('name') }}</span>
                                             </a>
                                         </th>
-                                        <th class="py-2 pr-4">
+                                        <th class="py-3 px-4">
                                             <a href="{{ $sortLink('contact') }}" class="inline-flex items-center gap-1 text-gray-600 hover:text-gray-900">
                                                 {{ __('Contact number') }} <span class="text-[10px]">{{ $sortIcon('contact') }}</span>
                                             </a>
                                         </th>
-                                        <th class="py-2 pr-4">
+                                        <th class="py-3 px-4">
                                             <a href="{{ $sortLink('city') }}" class="inline-flex items-center gap-1 text-gray-600 hover:text-gray-900">
                                                 {{ __('City Location') }} <span class="text-[10px]">{{ $sortIcon('city') }}</span>
                                             </a>
                                         </th>
-                                        <th class="py-2 pr-4">
+                                        <th class="py-3 px-4">
                                             <a href="{{ $sortLink('education') }}" class="inline-flex items-center gap-1 text-gray-600 hover:text-gray-900">
                                                 {{ __('Educational Attainment') }} <span class="text-[10px]">{{ $sortIcon('education') }}</span>
                                             </a>
                                         </th>
-                                        <th class="py-2 pr-4">
+                                        <th class="py-3 px-4">
                                             <a href="{{ $sortLink('gender') }}" class="inline-flex items-center gap-1 text-gray-600 hover:text-gray-900">
                                                 {{ __('Gender') }} <span class="text-[10px]">{{ $sortIcon('gender') }}</span>
                                             </a>
                                         </th>
-                                        <th class="py-2 pr-4">
+                                        <th class="py-3 px-4">
                                             <a href="{{ $sortLink('age') }}" class="inline-flex items-center gap-1 text-gray-600 hover:text-gray-900">
                                                 {{ __('Age') }} <span class="text-[10px]">{{ $sortIcon('age') }}</span>
                                             </a>
                                         </th>
-                                        <th class="py-2 pr-4">
+                                        <th class="py-3 px-4">
+                                            <a href="{{ $sortLink('current_job') }}" class="inline-flex items-center gap-1 text-gray-600 hover:text-gray-900">
+                                                {{ __('Current/Recent Job') }} <span class="text-[10px]">{{ $sortIcon('current_job') }}</span>
+                                            </a>
+                                        </th>
+                                        <th class="py-3 px-4">
                                             <a href="{{ $sortLink('job_title') }}" class="inline-flex items-center gap-1 text-gray-600 hover:text-gray-900">
                                                 {{ __('Job Title') }} <span class="text-[10px]">{{ $sortIcon('job_title') }}</span>
                                             </a>
                                         </th>
-                                        <th class="py-2 pr-4">
+                                        <th class="py-3 px-4">
                                             <a href="{{ $sortLink('status') }}" class="inline-flex items-center gap-1 text-gray-600 hover:text-gray-900">
                                                 {{ __('Status') }} <span class="text-[10px]">{{ $sortIcon('status') }}</span>
                                             </a>
                                         </th>
-                                        <th class="py-2 pr-4">
+                                        <th class="py-3 px-4">
                                             <a href="{{ $sortLink('applied_at') }}" class="inline-flex items-center gap-1 text-gray-600 hover:text-gray-900">
                                                 {{ __('Applied At') }} <span class="text-[10px]">{{ $sortIcon('applied_at') }}</span>
                                             </a>
                                         </th>
-                                        <th class="py-2 pr-4 text-right">{{ __('Actions') }}</th>
+                                        <th class="py-3 px-4 text-right">{{ __('Actions') }}</th>
                                     </tr>
                                 </thead>
                                 <tbody class="text-gray-700">
@@ -175,37 +216,56 @@
                                             @php
                                                 $jobseeker = $application->jobseeker;
                                             @endphp
-                                            <td class="py-3 pr-4">
+                                            <td class="py-3 px-4">
                                                 <a href="{{ route('employer.applicants.show', $application) }}" class="font-medium text-indigo-600 hover:text-indigo-900">
-                                                    {{ $application->jobseeker->full_name ?: ($application->jobseeker->user->name ?? __('N/A')) }}
+                                                    {!! $highlightSearch($application->jobseeker->full_name ?: ($application->jobseeker->user->name ?? __('N/A'))) !!}
                                                 </a>
-                                                <p class="text-xs text-gray-500">{{ $application->jobseeker->user->email ?? '' }}</p>
+                                                <p class="text-xs text-gray-500">{!! $highlightSearch($application->jobseeker->user->email ?? '') !!}</p>
                                             </td>
-                                            <td class="py-3 pr-4 whitespace-nowrap">
+                                            <td class="py-3 px-4 whitespace-nowrap">
                                                 @if ($jobseeker?->phone)
-                                                    {{ str_starts_with($jobseeker->phone, '+63') ? $jobseeker->phone : '+63' . ltrim($jobseeker->phone, '0') }}
+                                                    {!! $highlightSearch(str_starts_with($jobseeker->phone, '+63') ? $jobseeker->phone : '+63' . ltrim($jobseeker->phone, '0')) !!}
                                                 @else
                                                     -
                                                 @endif
                                             </td>
-                                            <td class="py-3 pr-4 whitespace-nowrap">{{ $jobseeker?->city ?? '-' }}</td>
-                                            <td class="py-3 pr-4 whitespace-nowrap">{{ $jobseeker?->educational_attainment ?? '-' }}</td>
-                                            <td class="py-3 pr-4 whitespace-nowrap">{{ $jobseeker?->gender ? ucfirst($jobseeker->gender) : '-' }}</td>
-                                            <td class="py-3 pr-4 whitespace-nowrap">{{ $jobseeker?->birth_date?->age ?? '-' }}</td>
-                                            <td class="py-3 pr-4">{{ $application->jobPost->title ?? __('N/A') }}</td>
-                                            <td class="py-3 pr-4 whitespace-nowrap">{{ $statuses[$application->current_status] ?? ucfirst($application->current_status) }}</td>
-                                            <td class="py-3 pr-4 whitespace-nowrap">{{ $application->applied_at?->format('M d, Y') }}</td>
-                                            <td class="py-3 pr-4 text-right space-x-2">
-                                                <a href="{{ route('employer.applicants.show', $application) }}" class="text-sm text-indigo-600 hover:text-indigo-900">
-                                                    {{ __('View Profile') }}
-                                                </a>
-                                                @if ($canUpdateStatus)
-                                                    <button type="button"
-                                                        class="text-sm text-gray-600 hover:text-gray-900"
-                                                        x-on:click="$dispatch('open-modal', 'status-{{ $application->id }}')">
-                                                        {{ __('Change Status') }}
-                                                    </button>
-                                                @endif
+                                            <td class="py-3 px-4 whitespace-nowrap">{!! $highlightSearch($jobseeker?->city ?? '-') !!}</td>
+                                            <td class="py-3 px-4 whitespace-nowrap">{!! $highlightSearch($jobseeker?->educational_attainment ?? '-') !!}</td>
+                                            <td class="py-3 px-4 whitespace-nowrap">{!! $highlightSearch($jobseeker?->gender ? ucfirst($jobseeker->gender) : '-') !!}</td>
+                                            <td class="py-3 px-4 whitespace-nowrap">{!! $highlightSearch((string)($jobseeker?->birth_date?->age ?? '-')) !!}</td>
+                                            <td class="py-3 px-4">
+                                                @php
+                                                    $firstWe = $jobseeker?->workExperiences->first();
+                                                    $currentJob = $firstWe?->position ?: $firstWe?->company ?: 'N/A';
+                                                @endphp
+                                                <span class="{{ $firstWe ? 'text-gray-800' : 'text-gray-500' }}">{!! $highlightSearch($currentJob) !!}</span>
+                                            </td>
+                                            <td class="py-3 px-4">{!! $highlightSearch($application->jobPost->title ?? __('N/A')) !!}</td>
+                                            <td class="py-3 px-4 whitespace-nowrap">{!! $highlightSearch($statuses[$application->current_status] ?? ucfirst($application->current_status)) !!}</td>
+                                            <td class="py-3 px-4 whitespace-nowrap">{!! $highlightSearch($application->applied_at ? $application->applied_at->format('M d, Y') : '') !!}</td>
+                                            <td class="py-3 px-4 text-right">
+                                                <div class="inline-flex items-center justify-end gap-2">
+                                                    <a href="{{ route('employer.applicants.show', $application) }}"
+                                                       class="inline-flex items-center justify-center w-9 h-9 rounded-md text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 transition"
+                                                       title="{{ __('View Profile') }}"
+                                                       aria-label="{{ __('View Profile') }}">
+                                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                                        </svg>
+                                                    </a>
+                                                    @if ($canUpdateStatus)
+                                                        <button type="button"
+                                                            class="inline-flex items-center justify-center w-9 h-9 rounded-md text-gray-500 hover:text-amber-600 hover:bg-amber-50 transition"
+                                                            title="{{ __('Change Status') }}"
+                                                            aria-label="{{ __('Change Status') }}"
+                                                            x-on:click="$dispatch('open-modal', 'status-{{ $application->id }}')">
+                                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                                            </svg>
+                                                        </button>
+                                                    @endif
+                                                </div>
                                             </td>
                                         </tr>
                                     @endforeach
@@ -763,6 +823,22 @@
             const dateTo = document.getElementById('dateTo');
             if (dateTo) {
                 dateTo.value = today;
+            }
+
+            // Handle export form submission - hide loader after download starts
+            const exportForm = document.getElementById('exportForm');
+            if (exportForm) {
+                exportForm.addEventListener('submit', function() {
+                    // Hide loader after a short delay to allow download to start
+                    // File downloads don't trigger page navigation, so we need to manually hide the loader
+                    setTimeout(function() {
+                        const loaderArea = document.body.getAttribute('data-loader-area') || document.body.getAttribute('data-dashboard-area') || 'guest';
+                        const loader = document.getElementById('global-loader-' + loaderArea);
+                        if (loader) {
+                            loader.style.display = 'none';
+                        }
+                    }, 1000);
+                });
             }
         });
     </script>

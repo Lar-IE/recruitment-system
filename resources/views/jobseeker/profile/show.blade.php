@@ -12,6 +12,9 @@
     $skillItems = collect(preg_split("/\r\n|\r|\n/", $jobseeker->skills ?? ''))
         ->map(fn ($item) => trim($item))
         ->filter();
+    $skillsWithProficiency = $jobseeker->skillsList->isNotEmpty()
+        ? $jobseeker->skillsList
+        : $skillItems->map(fn ($name) => (object)['skill_name' => $name, 'proficiency_percentage' => null]);
     $age = $jobseeker->birth_date?->age;
     $location = collect([$jobseeker->barangay, $jobseeker->city, $jobseeker->province, $jobseeker->region, $jobseeker->country])
         ->filter()
@@ -41,15 +44,15 @@
                     <h3 class="text-lg font-semibold">{{ __('Profile Overview') }}</h3>
                     <div class="mt-4 grid grid-cols-1 gap-4 text-sm text-gray-700 md:grid-cols-2 lg:grid-cols-3">
                         <div>
-                            <p class="text-xs font-semibold text-gray-500">{{ __('Name') }}</p>
+                            <p class="text-xs font-bold text-gray-800">{{ __('Name') }}</p>
                             <p>{{ $jobseeker->full_name ?: ($user->name ?? '-') }}</p>
                         </div>
                         <div>
-                            <p class="text-xs font-semibold text-gray-500">{{ __('Email') }}</p>
+                            <p class="text-xs font-bold text-gray-800">{{ __('Email') }}</p>
                             <p>{{ $user->email ?? '-' }}</p>
                         </div>
                         <div>
-                            <p class="text-xs font-semibold text-gray-500">{{ __('Contact number') }}</p>
+                            <p class="text-xs font-bold text-gray-800">{{ __('Contact number') }}</p>
                             <p>
                                 @if ($jobseeker->phone)
                                     {{ str_starts_with($jobseeker->phone, '+63') ? $jobseeker->phone : '+63' . ltrim($jobseeker->phone, '0') }}
@@ -59,47 +62,47 @@
                             </p>
                         </div>
                         <div>
-                            <p class="text-xs font-semibold text-gray-500">{{ __('City Location') }}</p>
+                            <p class="text-xs font-bold text-gray-800">{{ __('City Location') }}</p>
                             <p>{{ $jobseeker->city ?? '-' }}</p>
                         </div>
                         <div>
-                            <p class="text-xs font-semibold text-gray-500">{{ __('Educational Attainment') }}</p>
+                            <p class="text-xs font-bold text-gray-800">{{ __('Educational Attainment') }}</p>
                             <p>{{ $jobseeker->educational_attainment ?? '-' }}</p>
                         </div>
                         <div>
-                            <p class="text-xs font-semibold text-gray-500">{{ __('Education Details') }}</p>
+                            <p class="text-xs font-bold text-gray-800">{{ __('Education Details') }}</p>
                             <p>{{ $educationSummary ? $educationSummary : '-' }}</p>
                         </div>
                         <div>
-                            <p class="text-xs font-semibold text-gray-500">{{ __('Gender') }}</p>
+                            <p class="text-xs font-bold text-gray-800">{{ __('Gender') }}</p>
                             <p>{{ $jobseeker->gender ? ucfirst($jobseeker->gender) : '-' }}</p>
                         </div>
                         <div>
-                            <p class="text-xs font-semibold text-gray-500">{{ __('Age') }}</p>
+                            <p class="text-xs font-bold text-gray-800">{{ __('Age') }}</p>
                             <p>{{ $age ?? '-' }}</p>
                         </div>
                         <div>
-                            <p class="text-xs font-semibold text-gray-500">{{ __('Birth Date') }}</p>
+                            <p class="text-xs font-bold text-gray-800">{{ __('Birth Date') }}</p>
                             <p>{{ $jobseeker->birth_date?->format('M d, Y') ?? '-' }}</p>
                         </div>
                         <div>
-                            <p class="text-xs font-semibold text-gray-500">{{ __('Address') }}</p>
+                            <p class="text-xs font-bold text-gray-800">{{ __('Address') }}</p>
                             <p>{{ $jobseeker->address ?? '-' }}</p>
                         </div>
                         <div>
-                            <p class="text-xs font-semibold text-gray-500">{{ __('Barangay') }}</p>
+                            <p class="text-xs font-bold text-gray-800">{{ __('Barangay') }}</p>
                             <p>{{ $jobseeker->barangay ?? '-' }}</p>
                         </div>
                         <div>
-                            <p class="text-xs font-semibold text-gray-500">{{ __('Province') }}</p>
+                            <p class="text-xs font-bold text-gray-800">{{ __('Province') }}</p>
                             <p>{{ $jobseeker->province ?? '-' }}</p>
                         </div>
                         <div>
-                            <p class="text-xs font-semibold text-gray-500">{{ __('Region') }}</p>
+                            <p class="text-xs font-bold text-gray-800">{{ __('Region') }}</p>
                             <p>{{ $jobseeker->region ?? '-' }}</p>
                         </div>
                         <div class="lg:col-span-2">
-                            <p class="text-xs font-semibold text-gray-500">{{ __('Full Location') }}</p>
+                            <p class="text-xs font-bold text-gray-800">{{ __('Full Location') }}</p>
                             <p>{{ $location ?: '-' }}</p>
                         </div>
                     </div>
@@ -173,12 +176,24 @@
                         </div>
                         <div class="md:col-span-2">
                             <p class="text-sm font-semibold text-gray-800">{{ __('Skills') }}</p>
-                            @if ($skillItems->isEmpty())
+                            @if ($skillsWithProficiency->isEmpty())
                                 <p class="mt-2 text-sm text-gray-500">{{ __('No skills listed.') }}</p>
                             @else
-                                <div class="mt-2 flex flex-wrap gap-2">
-                                    @foreach ($skillItems as $item)
-                                        <span class="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs text-gray-700">{{ $item }}</span>
+                                <div class="mt-2 space-y-3">
+                                    @foreach ($skillsWithProficiency as $skill)
+                                        <div>
+                                            <div class="flex items-center justify-between text-sm mb-1">
+                                                <span class="font-medium text-gray-800">{{ is_object($skill) ? $skill->skill_name : $skill }}</span>
+                                                @if (is_object($skill) && $skill->proficiency_percentage !== null)
+                                                    <span class="text-gray-500">{{ $skill->proficiency_percentage }}%</span>
+                                                @endif
+                                            </div>
+                                            @if (is_object($skill) && $skill->proficiency_percentage !== null)
+                                                <div class="h-2 bg-gray-200 rounded-full overflow-hidden">
+                                                    <div class="h-full bg-indigo-600 rounded-full transition-all" style="width: {{ min(100, max(0, $skill->proficiency_percentage)) }}%"></div>
+                                                </div>
+                                            @endif
+                                        </div>
                                     @endforeach
                                 </div>
                             @endif

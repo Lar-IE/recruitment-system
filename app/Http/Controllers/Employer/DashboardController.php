@@ -12,7 +12,11 @@ class DashboardController extends Controller
 {
     public function index(Request $request): View
     {
-        $employer = $request->user()->employer;
+        // Use employer set by EnsureEmployerUser so both main employer and sub-user work.
+        $employer = $request->attributes->get('employer') ?? $request->user()?->employer;
+        if (! $employer) {
+            abort(403);
+        }
 
         $activeJobs = 0;
         $totalApplicants = 0;

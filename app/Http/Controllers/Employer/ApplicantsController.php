@@ -26,6 +26,7 @@ class ApplicantsController extends Controller
             'education' => 'jobseekers.educational_attainment',
             'gender' => 'jobseekers.gender',
             'age' => 'jobseekers.birth_date',
+            'current_job' => 'current_job', // sorted via raw subquery below
             'job_title' => 'job_posts.title',
             'status' => 'applications.current_status',
             'applied_at' => 'applications.applied_at',
@@ -37,7 +38,7 @@ class ApplicantsController extends Controller
             ->join('jobseekers', 'jobseekers.id', '=', 'applications.jobseeker_id')
             ->join('users', 'users.id', '=', 'jobseekers.user_id')
             ->where('job_posts.employer_id', $employer->id)
-            ->with(['jobPost', 'jobseeker.user']);
+            ->with(['jobPost', 'jobseeker.user', 'jobseeker.workExperiences']);
 
         if ($request->filled('job_post_id')) {
             $query->where('job_post_id', $request->integer('job_post_id'));
@@ -59,6 +60,15 @@ class ApplicantsController extends Controller
             $query->where('current_status', $request->string('status')->value());
         }
 
+        if ($request->filled('age_range')) {
+            $range = $request->string('age_range')->value();
+            if (preg_match('/^(\d+)-(\d+)$/', $range, $m)) {
+                $query->whereRaw('TIMESTAMPDIFF(YEAR, jobseekers.birth_date, CURDATE()) BETWEEN ? AND ?', [(int) $m[1], (int) $m[2]]);
+            } elseif (preg_match('/^(\d+)\+$/', $range, $m)) {
+                $query->whereRaw('TIMESTAMPDIFF(YEAR, jobseekers.birth_date, CURDATE()) >= ?', [(int) $m[1]]);
+            }
+        }
+
         if ($request->filled('search')) {
             $search = $request->string('search')->value();
             $query->where(function ($builder) use ($search) {
@@ -66,12 +76,37 @@ class ApplicantsController extends Controller
                     ->orWhere('users.email', 'like', "%{$search}%")
                     ->orWhere('jobseekers.phone', 'like', "%{$search}%")
                     ->orWhere('jobseekers.city', 'like', "%{$search}%")
-                    ->orWhere('job_posts.title', 'like', "%{$search}%");
+                    ->orWhere('job_posts.title', 'like', "%{$search}%")
+                    ->orWhereExists(function ($q) use ($search) {
+                        $q->select(\DB::raw(1))
+                            ->from('jobseeker_work_experience')
+                            ->whereColumn('jobseeker_work_experience.jobseeker_id', 'jobseekers.id')
+                            ->where(function ($q2) use ($search) {
+                                $q2->where('jobseeker_work_experience.position', 'like', "%{$search}%")
+                                    ->orWhere('jobseeker_work_experience.company', 'like', "%{$search}%");
+                            });
+                    });
+                if (is_numeric($search)) {
+                    $age = (int) $search;
+                    if ($age >= 1 && $age <= 120) {
+                        $builder->orWhereRaw('TIMESTAMPDIFF(YEAR, jobseekers.birth_date, CURDATE()) = ?', [$age]);
+                    }
+                }
             });
         }
 
-        $sortColumn = $sortable[$sort] ?? 'applications.applied_at';
-        $query->orderBy($sortColumn, $direction);
+        $sortColumn = $sortable[$sort] ?? null;
+        if ($sort === 'current_job') {
+            $dir = $direction === 'asc' ? 'asc' : 'desc';
+            $query->orderByRaw(
+                "(SELECT COALESCE(we.position, we.company, '') FROM jobseeker_work_experience we " .
+                "WHERE we.jobseeker_id = jobseekers.id ORDER BY we.`order` ASC, we.id ASC LIMIT 1) {$dir}"
+            );
+        } elseif ($sortColumn) {
+            $query->orderBy($sortColumn, $direction);
+        } else {
+            $query->orderBy('applications.applied_at', $direction);
+        }
 
         $applications = $query->paginate(10)->withQueryString();
         $jobPosts = $employer->jobPosts()->orderBy('title')->get(['id', 'title']);
@@ -106,7 +141,7 @@ class ApplicantsController extends Controller
             'cities' => $cities,
             'genders' => $genders,
             'educationalAttainments' => $educationalAttainments,
-            'filters' => $request->only(['job_post_id', 'status', 'city', 'gender', 'educational_attainment', 'sort', 'dir', 'search']),
+            'filters' => $request->only(['job_post_id', 'status', 'city', 'gender', 'educational_attainment', 'age_range', 'sort', 'dir', 'search']),
             'statuses' => $this->statuses(),
             'sort' => $sortColumn === 'applications.applied_at' && ! isset($sortable[$sort]) ? 'applied_at' : $sort,
             'dir' => $direction,
@@ -125,6 +160,9 @@ class ApplicantsController extends Controller
             'jobPost',
             'jobseeker.user',
             'jobseeker.documents',
+            'jobseeker.educations',
+            'jobseeker.workExperiences',
+            'jobseeker.skillsList',
             'statuses.setBy',
             'notes.creator',
         ]);
@@ -368,7 +406,7 @@ class ApplicantsController extends Controller
             $query->whereDate('applications.applied_at', '<=', $request->date('date_to'));
         }
 
-        $applications = $query->with(['jobPost', 'jobseeker.user'])->get();
+        $applications = $query->with(['jobPost', 'jobseeker.user', 'jobseeker.workExperiences', 'jobseeker.skillsList'])->get();
 
         $dateRange = '';
         if ($request->filled('date_from') || $request->filled('date_to')) {
@@ -400,6 +438,7 @@ class ApplicantsController extends Controller
                 'gender', 
                 'birth_date', 
                 'position_applied', 
+                'current_recent_job',
                 'skills', 
                 'experience_years', 
                 'status', 
@@ -420,6 +459,14 @@ class ApplicantsController extends Controller
                     $phone = "'" . $phone;
                 }
                 
+                // Get current/recent job from work experience
+                $firstWe = $jobseeker->workExperiences->first();
+                $currentJob = $firstWe ? ($firstWe->position ?: $firstWe->company ?: 'N/A') : 'N/A';
+                // Skills: use skillsList (name + %) or legacy text
+                $skillsText = $jobseeker->skillsList->isNotEmpty()
+                    ? $jobseeker->skillsList->map(fn ($s) => $s->skill_name . ' (' . $s->proficiency_percentage . '%)')->implode(', ')
+                    : ($jobseeker->skills ?? '');
+
                 fputcsv($file, [
                     $jobseeker->first_name ?? '',
                     $jobseeker->middle_name ?? '',
@@ -432,7 +479,8 @@ class ApplicantsController extends Controller
                     $jobseeker->gender ?? '',
                     $jobseeker->birth_date?->format('Y-m-d') ?? '',
                     $application->jobPost->title ?? '',
-                    $jobseeker->skills ?? '',
+                    $currentJob,
+                    $skillsText,
                     $jobseeker->experience ?? '',
                     $application->current_status,
                     $application->applied_at?->format('Y-m-d H:i:s') ?? '',

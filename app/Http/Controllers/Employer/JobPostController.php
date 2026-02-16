@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Employer\StoreJobPostRequest;
 use App\Http\Requests\Employer\UpdateJobPostRequest;
 use App\Models\JobPost;
+use App\Models\JobPostSkill;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -17,12 +18,20 @@ class JobPostController extends Controller
     {
         $employer = $this->requireEmployer($request);
 
-        $jobPosts = JobPost::where('employer_id', $employer->id)
-            ->latest()
-            ->paginate(10);
+        $statusFilter = $request->string('status')->value();
+        $validStatuses = ['published', 'draft', 'closed'];
+        if ($statusFilter && in_array($statusFilter, $validStatuses, true)) {
+            $query = JobPost::where('employer_id', $employer->id)->where('status', $statusFilter);
+        } else {
+            $query = JobPost::where('employer_id', $employer->id)->where('status', 'published');
+            $statusFilter = 'published';
+        }
+
+        $jobPosts = $query->latest()->paginate(10)->withQueryString();
 
         return view('employer.job-posts.index', [
             'jobPosts' => $jobPosts,
+            'statusFilter' => $statusFilter,
         ]);
     }
 
@@ -41,8 +50,22 @@ class JobPostController extends Controller
         $data['slug'] = $this->generateUniqueSlug($data['title']);
         $data['status'] = $data['status'] ?? 'draft';
         $data['published_at'] = $data['status'] === 'published' ? now() : null;
+        $data = $this->normalizeSalaryData($data);
+        $requiredSkills = $data['required_skills'] ?? [];
+        unset($data['required_skills']);
 
         $jobPost = JobPost::create($data);
+
+        foreach ($requiredSkills as $index => $skill) {
+            if (! empty(trim($skill['skill_name'] ?? ''))) {
+                $jobPost->requiredSkills()->create([
+                    'skill_name' => trim($skill['skill_name']),
+                    'weight' => (int) ($skill['weight'] ?? 1),
+                    'min_proficiency' => isset($skill['min_proficiency']) && $skill['min_proficiency'] !== '' ? (int) $skill['min_proficiency'] : null,
+                    'order' => $index,
+                ]);
+            }
+        }
 
         return redirect()->route('employer.job-posts.show', $jobPost)
             ->with('success', __('Job post created.'));
@@ -51,15 +74,23 @@ class JobPostController extends Controller
     public function show(Request $request, JobPost $jobPost): View
     {
         $jobPost = $this->findEmployerJobPost($request, $jobPost->id);
+        $jobPost->load('requiredSkills');
+
+        $matchingService = app(\App\Services\CandidateMatchingService::class);
+        $candidateSuggestions = $matchingService->getRankedCandidates($jobPost, 10);
+        $suggestedJobseekers = $matchingService->getSuggestedJobseekers($jobPost, 10);
 
         return view('employer.job-posts.show', [
             'jobPost' => $jobPost,
+            'candidateSuggestions' => $candidateSuggestions,
+            'suggestedJobseekers' => $suggestedJobseekers,
         ]);
     }
 
     public function edit(Request $request, JobPost $jobPost): View
     {
         $jobPost = $this->findEmployerJobPost($request, $jobPost->id);
+        $jobPost->load('requiredSkills');
 
         return view('employer.job-posts.edit', [
             'jobPost' => $jobPost,
@@ -84,7 +115,25 @@ class JobPostController extends Controller
             $data['closed_at'] = now();
         }
 
+        $data = $this->normalizeSalaryData($data);
+        $requiredSkills = $data['required_skills'] ?? null;
+        unset($data['required_skills']);
+
         $jobPost->update($data);
+
+        if ($requiredSkills !== null) {
+            $jobPost->requiredSkills()->delete();
+            foreach ($requiredSkills as $index => $skill) {
+                if (! empty(trim($skill['skill_name'] ?? ''))) {
+                    $jobPost->requiredSkills()->create([
+                        'skill_name' => trim($skill['skill_name']),
+                        'weight' => (int) ($skill['weight'] ?? 1),
+                        'min_proficiency' => isset($skill['min_proficiency']) && $skill['min_proficiency'] !== '' ? (int) $skill['min_proficiency'] : null,
+                        'order' => $index,
+                    ]);
+                }
+            }
+        }
 
         return redirect()->route('employer.job-posts.show', $jobPost)
             ->with('success', __('Job post updated.'));
@@ -204,5 +253,18 @@ class JobPostController extends Controller
         }
 
         return $query->exists();
+    }
+
+    private function normalizeSalaryData(array $data): array
+    {
+        $type = $data['salary_type'] ?? 'salary_range';
+        $data['salary_daily'] = $type === 'daily_rate' ? ($data['salary_daily'] ?? null) : null;
+        $data['salary_monthly'] = $type === 'fixed' ? ($data['salary_monthly'] ?? null) : null;
+        if ($type !== 'salary_range') {
+            $data['salary_min'] = null;
+            $data['salary_max'] = null;
+        }
+
+        return $data;
     }
 }

@@ -3,6 +3,8 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Request;
+use Illuminate\Session\TokenMismatchException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -21,7 +23,16 @@ return Application::configure(basePath: dirname(__DIR__))
             'employer.role' => \App\Http\Middleware\EnsureEmployerRole::class,
             'auth.any' => \App\Http\Middleware\AuthenticateAny::class,
         ]);
+        $middleware->web(append: [\App\Http\Middleware\PreventAuthenticatedCache::class]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        $exceptions->render(function (TokenMismatchException $e, Request $request) {
+            if ($request->is('login') || $request->routeIs('login')) {
+                return redirect()->route('login')
+                    ->withErrors(['email' => __('Your session has expired. Please try again.')]);
+            }
+
+            return redirect()->back()->withInput($request->except('password'))
+                ->withErrors(['email' => __('Your session has expired. Please try again.')]);
+        });
     })->create();

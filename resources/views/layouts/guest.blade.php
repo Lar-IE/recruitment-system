@@ -1,3 +1,5 @@
+@props(['fullWidth' => false])
+
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
     <head>
@@ -8,18 +10,26 @@
         <title>{{ config('app.name', 'Laravel') }}</title>
 
         <!-- Fonts -->
-        <link rel="preconnect" href="https://fonts.bunny.net">
-        <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
         <link rel="icon" href="{{ asset('assets/images/favicon.ico') }}">
 
         <!-- Scripts -->
         @vite(['resources/css/app.css', 'resources/js/app.js'])
+        <style>[x-cloak] { display: none !important; }</style>
     </head>
-    <body class="font-sans text-gray-900 antialiased">
-        <div class="min-h-screen flex flex-col sm:justify-center items-center px-4 py-8 bg-gray-100">
-            <div class="w-full sm:max-w-md px-6 py-6 bg-white shadow-md overflow-hidden sm:rounded-lg">
+    <body class="font-sans text-primary antialiased">
+        @if($fullWidth)
+            <div class="min-h-screen w-full" style="width: 100%; max-width: 100vw; overflow-x: hidden;">
                 {{ $slot }}
             </div>
-        </div>
+        @else
+            <div class="min-h-screen flex flex-col sm:justify-center items-center px-4 py-8 bg-gray-100">
+                <div class="w-full sm:max-w-md px-6 py-6 bg-white shadow-md overflow-hidden sm:rounded-lg">
+                    {{ $slot }}
+                </div>
+            </div>
+        @endif
     </body>
 </html>

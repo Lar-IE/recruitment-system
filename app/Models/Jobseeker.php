@@ -29,10 +29,12 @@ class Jobseeker extends Model
         'experience',
         'skills',
         'status',
+        'work_experience_1_current_or_recent',
     ];
 
     protected $casts = [
         'birth_date' => 'date',
+        'work_experience_1_current_or_recent' => 'boolean',
     ];
 
     public function user()
@@ -63,6 +65,11 @@ class Jobseeker extends Model
     public function workExperiences()
     {
         return $this->hasMany(JobseekerWorkExperience::class)->orderBy('order');
+    }
+
+    public function skillsList()
+    {
+        return $this->hasMany(JobseekerSkill::class, 'jobseeker_id')->orderBy('order');
     }
 
     public function getFullNameAttribute()

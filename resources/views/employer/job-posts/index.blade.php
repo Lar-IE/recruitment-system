@@ -10,8 +10,21 @@
 
     <div class="py-8">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
-            <div class="flex items-center justify-between">
-                <h3 class="text-lg font-semibold text-gray-800">{{ __('Your Job Posts') }}</h3>
+            <div class="flex flex-wrap items-center justify-between gap-4">
+                <div class="flex items-center gap-2">
+                    <h3 class="text-lg font-semibold text-gray-800">{{ __('Your Job Posts') }}</h3>
+                    <span class="inline-flex rounded-md shadow-sm isolate">
+                        <a href="{{ route('employer.job-posts.index', ['status' => 'published']) }}" class="relative inline-flex items-center rounded-l-md border px-3 py-2 text-sm font-medium focus:z-10 {{ ($statusFilter ?? 'published') === 'published' ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50' }}">
+                            {{ __('Active') }}
+                        </a>
+                        <a href="{{ route('employer.job-posts.index', ['status' => 'draft']) }}" class="relative -ml-px inline-flex items-center border px-3 py-2 text-sm font-medium focus:z-10 {{ ($statusFilter ?? '') === 'draft' ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50' }}">
+                            {{ __('Draft') }}
+                        </a>
+                        <a href="{{ route('employer.job-posts.index', ['status' => 'closed']) }}" class="relative -ml-px inline-flex items-center rounded-r-md border px-3 py-2 text-sm font-medium focus:z-10 {{ ($statusFilter ?? '') === 'closed' ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50' }}">
+                            {{ __('Closed') }}
+                        </a>
+                    </span>
+                </div>
                 <a href="{{ route('employer.job-posts.create') }}" class="inline-flex items-center px-4 py-2 bg-indigo-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-indigo-500">
                     {{ __('Create Job') }}
                 </a>

@@ -29,6 +29,10 @@ class AuthenticatedSessionController extends Controller
         $request->session()->regenerate();
 
         if ($guard === 'employer_sub_user') {
+            // Force session to be written before redirect so the sub-user auth is
+            // available on the next request (employer routes use employer_sub_user guard).
+            $request->session()->save();
+
             return redirect()->intended(route('employer.dashboard', absolute: false));
         }
 

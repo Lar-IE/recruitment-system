@@ -9,7 +9,7 @@
     </x-slot>
 
     <div class="py-8">
-        <div class="max-w-screen-2xl mx-auto sm:px-6 lg:px-8 space-y-6">
+        <div class="w-full px-4 sm:px-6 lg:px-8 space-y-6">
             @if (session('success'))
                 <div class="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
                     {{ session('success') }}
@@ -77,11 +77,27 @@
                         <option value="suspended" {{ ($filters['status'] ?? '') === 'suspended' ? 'selected' : '' }}>{{ __('Suspended') }}</option>
                     </select>
                 </div>
+                <div>
+                    <x-input-label for="age_range" :value="__('Age')" />
+                    <select id="age_range" name="age_range" class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+                        <option value="">{{ __('All') }}</option>
+                        <option value="18-24" {{ ($filters['age_range'] ?? '') === '18-24' ? 'selected' : '' }}>18–24</option>
+                        <option value="25-34" {{ ($filters['age_range'] ?? '') === '25-34' ? 'selected' : '' }}>25–34</option>
+                        <option value="35-44" {{ ($filters['age_range'] ?? '') === '35-44' ? 'selected' : '' }}>35–44</option>
+                        <option value="45-54" {{ ($filters['age_range'] ?? '') === '45-54' ? 'selected' : '' }}>45–54</option>
+                        <option value="55+" {{ ($filters['age_range'] ?? '') === '55+' ? 'selected' : '' }}>55+</option>
+                    </select>
+                </div>
                 <div class="min-w-[260px]">
                     <x-input-label for="search" :value="__('Search')" />
-                    <x-text-input id="search" name="search" class="mt-1 block w-full" :value="old('search', $filters['search'] ?? '')" placeholder="{{ __('Name, email, phone, city') }}" />
+                    <x-text-input id="search" name="search" class="mt-1 block w-full" :value="old('search', $filters['search'] ?? '')" placeholder="{{ __('Name, email, phone, city, current job, age, education, status') }}" />
                 </div>
-                <x-primary-button>{{ __('Search') }}</x-primary-button>
+                <div class="flex items-center gap-2">
+                    <x-primary-button>{{ __('Search') }}</x-primary-button>
+                    <a href="{{ route('employer.jobseekers.index') }}" class="text-sm text-gray-600 hover:text-gray-900">
+                        {{ __('Reset') }}
+                    </a>
+                </div>
             </form>
 
             @if ($canImport)
@@ -97,12 +113,32 @@
 
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-6 text-gray-900">
+                    @php
+                        $searchTerm = $filters['search'] ?? '';
+                        $highlightSearch = function ($text) use ($searchTerm) {
+                            if ($searchTerm === '' || $text === null || $text === '') {
+                                return e((string) $text);
+                            }
+                            $escaped = e((string) $text);
+                            $pattern = '/'.preg_quote(e($searchTerm), '/').'/iu';
+                            return preg_replace($pattern, '<mark class="bg-amber-200 dark:bg-amber-400/40 rounded px-0.5">$0</mark>', $escaped);
+                        };
+                    @endphp
+                    @if (!empty($searchTerm))
+                        <div class="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                            @if ($jobseekers->isEmpty())
+                                {{ __('No results found for') }} “<strong>{{ e($searchTerm) }}</strong>”.
+                            @else
+                                {{ $jobseekers->total() }} {{ $jobseekers->total() === 1 ? __('result') : __('results') }} {{ __('found for') }} “<strong>{{ e($searchTerm) }}</strong>”.
+                            @endif
+                        </div>
+                    @endif
                     @if ($jobseekers->isEmpty())
                         <p class="text-sm text-gray-500">{{ __('No jobseekers found.') }}</p>
                     @else
-                        <div class="overflow-x-auto">
-                            <table class="min-w-[1200px] text-sm">
-                                <thead class="text-left text-gray-500 whitespace-nowrap">
+                        <div class="overflow-x-auto -mx-6 sm:mx-0 lg:mx-0 lg:overflow-visible">
+                            <table class="w-full min-w-[1000px] lg:min-w-0 text-sm">
+                                <thead class="text-left text-gray-500 whitespace-nowrap bg-gray-50/80">
                                     <tr>
                                         @php
                                             $sortLink = function ($key) use ($filters, $currentSort, $currentDir) {
@@ -116,68 +152,84 @@
                                                 return $currentDir === 'asc' ? '▲' : '▼';
                                             };
                                         @endphp
-                                        <th class="py-2 pr-4">
+                                        <th class="py-3 px-4">
                                             <a href="{{ $sortLink('name') }}" class="inline-flex items-center gap-1 text-gray-600 hover:text-gray-900">
                                                 {{ __('Name') }} <span class="text-[10px]">{{ $sortIcon('name') }}</span>
                                             </a>
                                         </th>
-                                        <th class="py-2 pr-4">
+                                        <th class="py-3 px-4">
                                             <a href="{{ $sortLink('contact') }}" class="inline-flex items-center gap-1 text-gray-600 hover:text-gray-900">
                                                 {{ __('Contact number') }} <span class="text-[10px]">{{ $sortIcon('contact') }}</span>
                                             </a>
                                         </th>
-                                        <th class="py-2 pr-4">
+                                        <th class="py-3 px-4">
                                             <a href="{{ $sortLink('city') }}" class="inline-flex items-center gap-1 text-gray-600 hover:text-gray-900">
                                                 {{ __('City Location') }} <span class="text-[10px]">{{ $sortIcon('city') }}</span>
                                             </a>
                                         </th>
-                                        <th class="py-2 pr-4">
+                                        <th class="py-3 px-4">
                                             <a href="{{ $sortLink('educational_attainment') }}" class="inline-flex items-center gap-1 text-gray-600 hover:text-gray-900">
                                                 {{ __('Educational Attainment') }} <span class="text-[10px]">{{ $sortIcon('educational_attainment') }}</span>
                                             </a>
                                         </th>
-                                        <th class="py-2 pr-4">
+                                        <th class="py-3 px-4">
                                             <a href="{{ $sortLink('gender') }}" class="inline-flex items-center gap-1 text-gray-600 hover:text-gray-900">
                                                 {{ __('Gender') }} <span class="text-[10px]">{{ $sortIcon('gender') }}</span>
                                             </a>
                                         </th>
-                                        <th class="py-2 pr-4">
+                                        <th class="py-3 px-4">
                                             <a href="{{ $sortLink('age') }}" class="inline-flex items-center gap-1 text-gray-600 hover:text-gray-900">
                                                 {{ __('Age') }} <span class="text-[10px]">{{ $sortIcon('age') }}</span>
                                             </a>
                                         </th>
-                                        <th class="py-2 pr-4">
+                                        <th class="py-3 px-4">
+                                            {{ __('Current/Recent Job') }}
+                                        </th>
+                                        <th class="py-3 px-4">
                                             <a href="{{ $sortLink('status') }}" class="inline-flex items-center gap-1 text-gray-600 hover:text-gray-900">
                                                 {{ __('Status') }} <span class="text-[10px]">{{ $sortIcon('status') }}</span>
                                             </a>
                                         </th>
-                                        <th class="py-2 pr-4 text-right">{{ __('Actions') }}</th>
+                                        <th class="py-3 px-4 text-right">{{ __('Actions') }}</th>
                                     </tr>
                                 </thead>
                                 <tbody class="text-gray-700">
                                     @foreach ($jobseekers as $jobseeker)
                                         <tr class="border-t align-top">
-                                            <td class="py-3 pr-4">
+                                            <td class="py-3 px-4">
                                                 <a href="{{ route('employer.jobseekers.show', $jobseeker) }}" class="font-medium text-indigo-600 hover:text-indigo-900">
-                                                    {{ $jobseeker->full_name ?: ($jobseeker->user->name ?? __('N/A')) }}
+                                                    {!! $highlightSearch($jobseeker->full_name ?: ($jobseeker->user->name ?? __('N/A'))) !!}
                                                 </a>
-                                                <p class="text-xs text-gray-500">{{ $jobseeker->user->email ?? '' }}</p>
+                                                <p class="text-xs text-gray-500">{!! $highlightSearch($jobseeker->user->email ?? '') !!}</p>
                                             </td>
-                                            <td class="py-3 pr-4 whitespace-nowrap">
+                                            <td class="py-3 px-4 whitespace-nowrap">
                                                 @if ($jobseeker->phone)
-                                                    {{ str_starts_with($jobseeker->phone, '+63') ? $jobseeker->phone : '+63' . ltrim($jobseeker->phone, '0') }}
+                                                    {!! $highlightSearch(str_starts_with($jobseeker->phone, '+63') ? $jobseeker->phone : '+63' . ltrim($jobseeker->phone, '0')) !!}
                                                 @else
                                                     -
                                                 @endif
                                             </td>
-                                            <td class="py-3 pr-4 whitespace-nowrap">{{ $jobseeker->city ?? '-' }}</td>
-                                            <td class="py-3 pr-4 whitespace-nowrap">{{ $jobseeker->educational_attainment ?? '-' }}</td>
-                                            <td class="py-3 pr-4 whitespace-nowrap">{{ $jobseeker->gender ? ucfirst($jobseeker->gender) : '-' }}</td>
-                                            <td class="py-3 pr-4 whitespace-nowrap">{{ $jobseeker->birth_date?->age ?? '-' }}</td>
-                                            <td class="py-3 pr-4 whitespace-nowrap">{{ ucfirst($jobseeker->status) }}</td>
-                                            <td class="py-3 pr-4 text-right">
-                                                <a href="{{ route('employer.jobseekers.show', $jobseeker) }}" class="text-sm text-indigo-600 hover:text-indigo-900">
-                                                    {{ __('View Profile') }}
+                                            <td class="py-3 px-4 whitespace-nowrap">{!! $highlightSearch($jobseeker->city ?? '-') !!}</td>
+                                            <td class="py-3 px-4 whitespace-nowrap">{!! $highlightSearch($jobseeker->educational_attainment ?? '-') !!}</td>
+                                            <td class="py-3 px-4 whitespace-nowrap">{!! $highlightSearch($jobseeker->gender ? ucfirst($jobseeker->gender) : '-') !!}</td>
+                                            <td class="py-3 px-4 whitespace-nowrap">{!! $highlightSearch((string)($jobseeker->birth_date?->age ?? '-')) !!}</td>
+                                            <td class="py-3 px-4">
+                                                @php
+                                                    $firstWe = $jobseeker->workExperiences->first();
+                                                    $currentJob = $firstWe?->position ?: $firstWe?->company ?: 'N/A';
+                                                @endphp
+                                                <span class="{{ $firstWe ? 'text-gray-800' : 'text-gray-500' }}">{!! $highlightSearch($currentJob) !!}</span>
+                                            </td>
+                                            <td class="py-3 px-4 whitespace-nowrap">{!! $highlightSearch(ucfirst($jobseeker->status)) !!}</td>
+                                            <td class="py-3 px-4 text-right">
+                                                <a href="{{ route('employer.jobseekers.show', $jobseeker) }}"
+                                                   class="inline-flex items-center justify-center w-9 h-9 rounded-md text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 transition"
+                                                   title="{{ __('View Profile') }}"
+                                                   aria-label="{{ __('View Profile') }}">
+                                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                                    </svg>
                                                 </a>
                                             </td>
                                         </tr>
@@ -693,6 +745,22 @@
             const dateTo = document.getElementById('jobseekerDateTo');
             if (dateTo) {
                 dateTo.value = today;
+            }
+
+            // Handle export form submission - hide loader after download starts
+            const jobseekerExportForm = document.getElementById('jobseekerExportForm');
+            if (jobseekerExportForm) {
+                jobseekerExportForm.addEventListener('submit', function() {
+                    // Hide loader after a short delay to allow download to start
+                    // File downloads don't trigger page navigation, so we need to manually hide the loader
+                    setTimeout(function() {
+                        const loaderArea = document.body.getAttribute('data-loader-area') || document.body.getAttribute('data-dashboard-area') || 'guest';
+                        const loader = document.getElementById('global-loader-' + loaderArea);
+                        if (loader) {
+                            loader.style.display = 'none';
+                        }
+                    }, 1000);
+                });
             }
         });
     </script>

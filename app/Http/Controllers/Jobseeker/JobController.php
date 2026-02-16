@@ -41,10 +41,12 @@ class JobController extends Controller
         $jobPosts = $query->latest('published_at')->paginate(10)->withQueryString();
 
         $applications = $this->getApplicationsForCurrentJobseeker($request);
+        $employerIdsAppliedRecently = $this->getEmployerIdsAppliedRecently($request);
 
         return view('jobseeker.jobs.index', [
             'jobPosts' => $jobPosts,
             'applications' => $applications,
+            'employerIdsAppliedRecently' => $employerIdsAppliedRecently,
             'filters' => $request->only(['search', 'location', 'job_type']),
         ]);
     }
@@ -65,17 +67,27 @@ class JobController extends Controller
         }
 
         $application = null;
+        $appliedToEmployerWithinSixMonths = false;
 
         $jobseeker = $request->user()->jobseeker;
         if ($jobseeker) {
             $application = Application::where('jobseeker_id', $jobseeker->id)
                 ->where('job_post_id', $jobPost->id)
                 ->first();
+
+            if (! $application && $jobPost->employer_id) {
+                $appliedToEmployerWithinSixMonths = Application::where('applications.jobseeker_id', $jobseeker->id)
+                    ->join('job_posts', 'job_posts.id', '=', 'applications.job_post_id')
+                    ->where('job_posts.employer_id', $jobPost->employer_id)
+                    ->where('applications.applied_at', '>=', now()->subMonths(6))
+                    ->exists();
+            }
         }
 
         return view('jobseeker.jobs.show', [
             'jobPost' => $jobPost,
             'application' => $application,
+            'appliedToEmployerWithinSixMonths' => $appliedToEmployerWithinSixMonths,
         ]);
     }
 
@@ -103,13 +115,31 @@ class JobController extends Controller
             return back()->withErrors(['job' => __('You already applied for this job.')]);
         }
 
-        DB::transaction(function () use ($request, $jobseeker, $jobPost) {
+        if ($jobPost->employer_id) {
+            $recentApplicationToEmployer = Application::where('applications.jobseeker_id', $jobseeker->id)
+                ->join('job_posts', 'job_posts.id', '=', 'applications.job_post_id')
+                ->where('job_posts.employer_id', $jobPost->employer_id)
+                ->where('applications.applied_at', '>=', now()->subMonths(6))
+                ->exists();
+
+            if ($recentApplicationToEmployer) {
+                return back()->withErrors(['job' => __('You have already applied to this company within the last 6 months.')]);
+            }
+        }
+
+        $coverLetterPath = null;
+        if ($request->hasFile('cover_letter_file')) {
+            $coverLetterPath = $request->file('cover_letter_file')->store('cover_letters', 'public');
+        }
+
+        DB::transaction(function () use ($request, $jobseeker, $jobPost, $coverLetterPath) {
             $application = Application::create([
                 'job_post_id' => $jobPost->id,
                 'jobseeker_id' => $jobseeker->id,
                 'current_status' => 'new',
                 'applied_at' => now(),
                 'cover_letter' => $request->input('cover_letter'),
+                'cover_letter_file' => $coverLetterPath,
             ]);
 
             ApplicationStatus::create([
@@ -140,5 +170,27 @@ class JobController extends Controller
         return Application::where('jobseeker_id', $jobseeker->id)
             ->get()
             ->keyBy('job_post_id');
+    }
+
+    /**
+     * Employer IDs the current jobseeker has applied to within the last 6 months.
+     *
+     * @return array<int>
+     */
+    private function getEmployerIdsAppliedRecently(Request $request): array
+    {
+        $jobseeker = $request->user()->jobseeker;
+
+        if (! $jobseeker) {
+            return [];
+        }
+
+        return Application::where('applications.jobseeker_id', $jobseeker->id)
+            ->where('applications.applied_at', '>=', now()->subMonths(6))
+            ->join('job_posts', 'job_posts.id', '=', 'applications.job_post_id')
+            ->whereNotNull('job_posts.employer_id')
+            ->distinct()
+            ->pluck('job_posts.employer_id')
+            ->all();
     }
 }

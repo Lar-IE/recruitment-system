@@ -35,7 +35,12 @@
                         @endforeach
                     </select>
                 </div>
-                <x-primary-button>{{ __('Filter') }}</x-primary-button>
+                <div class="flex items-center gap-2">
+                    <x-primary-button>{{ __('Filter') }}</x-primary-button>
+                    <a href="{{ route('employer.documents') }}" class="text-sm text-gray-600 hover:text-gray-900">
+                        {{ __('Reset') }}
+                    </a>
+                </div>
             </form>
 
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">

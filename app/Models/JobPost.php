@@ -18,10 +18,14 @@ class JobPost extends Model
         'job_type',
         'description',
         'responsibilities',
+        'benefits',
         'requirements',
         'salary_min',
         'salary_max',
         'currency',
+        'salary_type',
+        'salary_daily',
+        'salary_monthly',
         'status',
         'application_deadline',
         'published_at',
@@ -34,6 +38,8 @@ class JobPost extends Model
         'closed_at' => 'datetime',
         'salary_min' => 'decimal:2',
         'salary_max' => 'decimal:2',
+        'salary_daily' => 'decimal:2',
+        'salary_monthly' => 'decimal:2',
     ];
 
     public function employer()
@@ -44,5 +50,10 @@ class JobPost extends Model
     public function applications()
     {
         return $this->hasMany(Application::class);
+    }
+
+    public function requiredSkills()
+    {
+        return $this->hasMany(JobPostSkill::class)->orderBy('order');
     }
 }

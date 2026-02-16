@@ -15,6 +15,7 @@ class Application extends Model
         'current_status',
         'applied_at',
         'cover_letter',
+        'cover_letter_file',
     ];
 
     protected $casts = [

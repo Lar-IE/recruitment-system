@@ -28,8 +28,8 @@ class AtsController extends Controller
         $validated = $request->validate([
             'status' => ['required', 'in:new,under_review,interview_scheduled,shortlisted,hired,rejected,on_hold'],
             'note' => ['nullable', 'string', 'max:1000'],
-            'interview_at' => ['required_if:status,interview_scheduled', 'date'],
-            'interview_link' => ['required_if:status,interview_scheduled', 'url', 'max:2048'],
+            'interview_at' => ['nullable', 'required_if:status,interview_scheduled', 'date'],
+            'interview_link' => ['nullable', 'required_if:status,interview_scheduled', 'url', 'max:2048'],
         ]);
 
         $application->update([

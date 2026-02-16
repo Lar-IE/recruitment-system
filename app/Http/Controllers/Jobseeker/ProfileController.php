@@ -13,7 +13,7 @@ class ProfileController extends Controller
     public function show(Request $request): View
     {
         $jobseeker = $request->user()->jobseeker;
-        $jobseeker->load(['educations', 'workExperiences']);
+        $jobseeker->load(['educations', 'workExperiences', 'skillsList']);
         
         return view('jobseeker.profile.show', [
             'jobseeker' => $jobseeker,
@@ -23,7 +23,7 @@ class ProfileController extends Controller
     public function edit(Request $request): View
     {
         $jobseeker = $request->user()->jobseeker;
-        $jobseeker->load(['educations', 'workExperiences']);
+        $jobseeker->load(['educations', 'workExperiences', 'skillsList']);
         
         return view('jobseeker.profile.edit', [
             'jobseeker' => $jobseeker,
@@ -34,6 +34,11 @@ class ProfileController extends Controller
     {
         $jobseeker = $request->user()->jobseeker;
         $validated = $request->validated();
+
+        // Work Experience #1 is always treated as current/recent when filled (no checkbox)
+        $workExperienceEntries = $validated['work_experience'] ?? [];
+        $firstWeFilled = ! empty(($workExperienceEntries[0] ?? [])['company'] ?? '');
+        $workExperience1CurrentOrRecent = $firstWeFilled;
 
         // Update basic profile information
         $jobseeker->update([
@@ -51,8 +56,22 @@ class ProfileController extends Controller
             'gender' => $validated['gender'],
             'educational_attainment' => $validated['educational_attainment'],
             'bio' => $validated['bio'] ?? null,
-            'skills' => $validated['skills'] ?? null,
+            'work_experience_1_current_or_recent' => $workExperience1CurrentOrRecent,
         ]);
+
+        // Handle skills with proficiency
+        if (isset($validated['skills'])) {
+            $jobseeker->skillsList()->delete();
+            foreach ($validated['skills'] as $index => $skill) {
+                if (! empty(trim($skill['skill_name'] ?? ''))) {
+                    $jobseeker->skillsList()->create([
+                        'skill_name' => trim($skill['skill_name']),
+                        'proficiency_percentage' => (int) ($skill['proficiency_percentage'] ?? 50),
+                        'order' => $index,
+                    ]);
+                }
+            }
+        }
 
         // Update user's full name for consistency
         $fullName = trim(($validated['first_name'] ?? '') . ' ' . ($validated['middle_name'] ?? '') . ' ' . ($validated['last_name'] ?? ''));
@@ -83,16 +102,21 @@ class ProfileController extends Controller
         if (isset($validated['work_experience'])) {
             // Delete existing work experience records
             $jobseeker->workExperiences()->delete();
-            
-            // Create new work experience records
-            foreach ($validated['work_experience'] as $index => $experience) {
-                if (!empty($experience['company'])) {
+
+            $workExperienceEntries = $validated['work_experience'];
+            $validWorkExperienceCount = count(array_filter($workExperienceEntries, fn ($e) => ! empty($e['company'] ?? '')));
+
+            foreach ($workExperienceEntries as $index => $experience) {
+                if (! empty($experience['company'])) {
+                    // WE#1 is always stored as current when filled; WE#2+ are not.
+                    $isCurrent = $index === 0;
+
                     $jobseeker->workExperiences()->create([
-                        'company' => $experience['company'],
-                        'position' => $experience['position'] ?? null,
+                        'company' => trim($experience['company'] ?? ''),
+                        'position' => trim($experience['position'] ?? '') ?: 'N/A',
                         'start_date' => $experience['start_date'] ?? null,
                         'end_date' => $experience['end_date'] ?? null,
-                        'is_current' => isset($experience['is_current']) && $experience['is_current'] == '1',
+                        'is_current' => $isCurrent,
                         'description' => $experience['description'] ?? null,
                         'order' => $index,
                     ]);

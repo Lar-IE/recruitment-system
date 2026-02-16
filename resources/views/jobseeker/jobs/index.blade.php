@@ -1,6 +1,3 @@
-@php
-    use Illuminate\Support\Str;
-@endphp
 <x-app-layout>
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
@@ -38,42 +35,30 @@
 
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-6 text-gray-900">
+                    @php
+                        $searchTerm = $filters['search'] ?? '';
+                        $highlightSearch = function ($text) use ($searchTerm) {
+                            if ($searchTerm === '' || $text === null || $text === '') {
+                                return e((string) $text);
+                            }
+                            $escaped = e((string) $text);
+                            $pattern = '/'.preg_quote(e($searchTerm), '/').'/iu';
+                            return preg_replace($pattern, '<mark class="bg-amber-200 dark:bg-amber-400/40 rounded px-0.5">$0</mark>', $escaped);
+                        };
+                    @endphp
+                    @if (!empty($searchTerm))
+                        <div class="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                            @if ($jobPosts->isEmpty())
+                                {{ __('No results found for') }} "<strong>{{ e($searchTerm) }}</strong>".
+                            @else
+                                {{ $jobPosts->total() }} {{ $jobPosts->total() === 1 ? __('result') : __('results') }} {{ __('found for') }} "<strong>{{ e($searchTerm) }}</strong>".
+                            @endif
+                        </div>
+                    @endif
                     @if ($jobPosts->isEmpty())
                         <p class="text-sm text-gray-500">{{ __('No jobs found.') }}</p>
                     @else
-                        <div class="space-y-4">
-                            @foreach ($jobPosts as $jobPost)
-                                @php($application = $applications[$jobPost->id] ?? null)
-                                <div class="border rounded-lg p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                                    <div class="flex items-start gap-4">
-                                        @if ($jobPost->employer && $jobPost->employer->company_logo)
-                                            <img src="{{ asset('storage/' . $jobPost->employer->company_logo) }}" 
-                                                 alt="{{ $jobPost->employer->companyProfile?->company_name ?? $jobPost->employer->company_name }}" 
-                                                 class="h-12 w-12 object-contain flex-shrink-0 border rounded p-1">
-                                        @endif
-                                        <div>
-                                            <h3 class="text-lg font-semibold">{{ $jobPost->title }}</h3>
-                                            <p class="text-sm text-gray-500">
-                                                {{ $jobPost->employer->companyProfile?->company_name ?? $jobPost->employer->company_name ?? __('N/A') }}
-                                            </p>
-                                            <p class="text-sm text-gray-500">
-                                                {{ $jobPost->location ?? __('Remote') }} · {{ Str::of($jobPost->job_type)->replace('_', ' ')->title() }}
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <div class="flex items-center gap-3">
-                                        @if ($application)
-                                            <span class="text-xs px-2 py-1 rounded-full bg-indigo-50 text-indigo-700">
-                                                {{ Str::of($application->current_status)->replace('_', ' ')->title() }}
-                                            </span>
-                                            <a href="{{ route('jobseeker.jobs.show', $jobPost) }}" class="text-sm text-indigo-600 hover:text-indigo-900">{{ __('View') }}</a>
-                                        @else
-                                            <a href="{{ route('jobseeker.jobs.show', $jobPost) }}" class="text-sm text-indigo-600 hover:text-indigo-900">{{ __('View Details') }}</a>
-                                        @endif
-                                    </div>
-                                </div>
-                            @endforeach
-                        </div>
+                        @include('jobseeker.jobs.partials.listing', ['jobPosts' => $jobPosts, 'applications' => $applications, 'searchTerm' => $searchTerm, 'employerIdsAppliedRecently' => $employerIdsAppliedRecently ?? []])
                         <div class="mt-4">
                             {{ $jobPosts->links() }}
                         </div>

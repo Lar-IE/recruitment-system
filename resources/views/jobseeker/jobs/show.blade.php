@@ -67,6 +67,13 @@
                         </div>
                     @endif
 
+                    @if ($jobPost->benefits)
+                        <div>
+                            <h3 class="font-semibold">{{ __('Benefits') }}</h3>
+                            <p class="text-sm text-gray-700 whitespace-pre-line">{{ $jobPost->benefits }}</p>
+                        </div>
+                    @endif
+
                     @if ($jobPost->requirements)
                         <div>
                             <h3 class="font-semibold">{{ __('Requirements') }}</h3>
@@ -75,7 +82,16 @@
                     @endif
 
                     <div class="text-sm text-gray-600">
-                        <p>{{ __('Salary: :min - :max :currency', ['min' => $jobPost->salary_min ?? '-', 'max' => $jobPost->salary_max ?? '-', 'currency' => $jobPost->currency]) }}</p>
+                        @php
+                            $salaryType = $jobPost->salary_type ?? 'salary_range';
+                        @endphp
+                        @if ($salaryType === 'daily_rate' && $jobPost->salary_daily !== null)
+                            <p>{{ __('Rate per Day: :amount :currency', ['amount' => number_format($jobPost->salary_daily, 2), 'currency' => $jobPost->currency]) }}</p>
+                        @elseif ($salaryType === 'fixed' && $jobPost->salary_monthly !== null)
+                            <p>{{ __('Monthly Rate: :amount :currency', ['amount' => number_format($jobPost->salary_monthly, 2), 'currency' => $jobPost->currency]) }}</p>
+                        @else
+                            <p>{{ __('Salary: :min - :max :currency', ['min' => $jobPost->salary_min !== null ? number_format($jobPost->salary_min, 2) : '-', 'max' => $jobPost->salary_max !== null ? number_format($jobPost->salary_max, 2) : '-', 'currency' => $jobPost->currency]) }}</p>
+                        @endif
                     </div>
 
                     <div class="border-t pt-4">
@@ -83,13 +99,25 @@
                             <p class="text-sm text-gray-600">
                                 {{ __('You already applied. Status: :status', ['status' => Str::of($application->current_status)->replace('_', ' ')->title()]) }}
                             </p>
+                        @elseif ($appliedToEmployerWithinSixMonths ?? false)
+                            <div class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                                <p class="font-medium">{{ __('You have already applied to this company within the last 6 months.') }}</p>
+                                <p class="mt-1 text-amber-700">{{ __('You can apply again after 6 months from your last application to this company.') }}</p>
+                            </div>
                         @else
-                            <form method="POST" action="{{ route('jobseeker.jobs.apply', $jobPost) }}" class="space-y-4">
+                            <form method="POST" action="{{ route('jobseeker.jobs.apply', $jobPost) }}" enctype="multipart/form-data" class="space-y-4">
                                 @csrf
                                 <div>
                                     <x-input-label for="cover_letter" :value="__('Cover Letter (optional)')" />
-                                    <textarea id="cover_letter" name="cover_letter" rows="4" class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">{{ old('cover_letter') }}</textarea>
+                                    <p class="text-xs text-gray-500 mb-1">{{ __('You can type your cover letter below and/or upload a PDF or Word file.') }}</p>
+                                    <textarea id="cover_letter" name="cover_letter" rows="4" class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm" placeholder="{{ __('Type your cover letter here...') }}">{{ old('cover_letter') }}</textarea>
                                     <x-input-error :messages="$errors->get('cover_letter')" class="mt-2" />
+                                </div>
+                                <div>
+                                    <x-input-label for="cover_letter_file" :value="__('Or upload cover letter (optional)')" />
+                                    <input type="file" id="cover_letter_file" name="cover_letter_file" accept=".pdf,.doc,.docx" class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
+                                    <p class="mt-1 text-xs text-gray-500">{{ __('Accepted: PDF, .doc, .docx (max 5 MB)') }}</p>
+                                    <x-input-error :messages="$errors->get('cover_letter_file')" class="mt-2" />
                                 </div>
                                 <x-primary-button>{{ __('Apply Now') }}</x-primary-button>
                             </form>
