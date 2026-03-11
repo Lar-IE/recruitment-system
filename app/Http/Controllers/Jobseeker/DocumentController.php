@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Jobseeker;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Jobseeker\StoreDocumentRequest;
 use App\Http\Requests\Jobseeker\StoreDocumentsBatchRequest;
+use App\Models\Application;
 use App\Models\Document;
 use App\Models\Jobseeker;
 use App\Notifications\DocumentUpdated;
@@ -20,16 +21,22 @@ class DocumentController extends Controller
     {
         $jobseeker = $request->user()->jobseeker;
         $documents = collect();
+        $isHired = false;
 
         if ($jobseeker) {
             $documents = Document::where('jobseeker_id', $jobseeker->id)
                 ->get()
                 ->keyBy('type');
+
+            $isHired = Application::where('jobseeker_id', $jobseeker->id)
+                ->where('current_status', 'hired')
+                ->exists();
         }
 
         return view('jobseeker.documents.index', [
             'documents' => $documents,
             'types' => $this->documentTypes(),
+            'isHired' => $isHired,
         ]);
     }
 
@@ -88,10 +95,42 @@ class DocumentController extends Controller
             abort(403);
         }
 
+        $isHired = Application::where('jobseeker_id', $jobseeker->id)
+            ->where('current_status', 'hired')
+            ->exists();
+
         return view('jobseeker.documents.show', [
             'document' => $document,
             'typeLabel' => $this->documentTypes()[$document->type] ?? strtoupper($document->type),
+            'isHired' => $isHired,
         ]);
+    }
+
+    public function destroy(Request $request, Document $document): RedirectResponse
+    {
+        $jobseeker = $request->user()->jobseeker;
+
+        if (! $jobseeker || $document->jobseeker_id !== $jobseeker->id) {
+            abort(403);
+        }
+
+        $isHired = Application::where('jobseeker_id', $jobseeker->id)
+            ->where('current_status', 'hired')
+            ->exists();
+
+        if ($isHired) {
+            return redirect()->route('jobseeker.documents')
+                ->withErrors(['document' => __('You cannot remove documents while you are currently hired.')]);
+        }
+
+        if ($document->file_path && Storage::disk('public')->exists($document->file_path)) {
+            Storage::disk('public')->delete($document->file_path);
+        }
+
+        $document->delete();
+
+        return redirect()->route('jobseeker.documents')
+            ->with('success', __('Document removed successfully.'));
     }
 
     private function documentTypes(): array

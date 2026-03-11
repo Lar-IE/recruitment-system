@@ -165,6 +165,7 @@ class ApplicantsController extends Controller
             'jobseeker.skillsList',
             'statuses.setBy',
             'notes.creator',
+            'notes.creatorSubUser',
         ]);
 
         $resume = $application->jobseeker->documents
@@ -223,7 +224,7 @@ class ApplicantsController extends Controller
     public function import(Request $request)
     {
         $request->validate([
-            'file' => 'required|file|mimes:csv,xlsx,xls,txt',
+            'file' => ['required', 'file', 'mimes:csv,txt', 'max:2048'],
         ]);
 
         $employer = $request->user()->employer;
@@ -233,9 +234,21 @@ class ApplicantsController extends Controller
 
         $file = $request->file('file');
         $handle = fopen($file->getRealPath(), 'r');
-        
-        // Skip header row
-        fgetcsv($handle);
+        if (! $handle) {
+            return redirect()->route('employer.applicants')
+                ->withErrors(['file' => __('Unable to read the uploaded file.')]);
+        }
+
+        $header = fgetcsv($handle);
+        $expectedHeader = ['first_name', 'middle_name', 'last_name', 'email', 'phone', 'city', 'education', 'educational_attainment', 'gender', 'birth_date', 'position_applied', 'skills', 'experience_years', 'status', 'applied_at'];
+        $normalizedHeader = array_map(static fn ($value) => strtolower(trim((string) $value)), $header ?: []);
+
+        if ($normalizedHeader !== $expectedHeader) {
+            fclose($handle);
+
+            return redirect()->route('employer.applicants')
+                ->withErrors(['file' => __('Invalid CSV header format.')]);
+        }
         
         $imported = 0;
         $validStatuses = array_keys($this->statuses());
@@ -351,8 +364,10 @@ class ApplicantsController extends Controller
 
             // Find job post by title
             $jobPost = $employer->jobPosts()
-                ->where('title', 'like', '%' . $positionApplied . '%')
-                ->orWhere('title', $positionApplied)
+                ->where(function ($query) use ($positionApplied) {
+                    $query->where('title', 'like', '%' . $positionApplied . '%')
+                        ->orWhere('title', $positionApplied);
+                })
                 ->first();
 
             // Skip if job post not found
@@ -497,11 +512,11 @@ class ApplicantsController extends Controller
     {
         return [
             'new' => 'New',
-            'under_review' => 'Under Review',
-            'interview_scheduled' => 'Interview Scheduled',
+            'for_review' => 'For Review',
+            'schedule_interview' => 'Schedule Interview',
             'shortlisted' => 'Shortlisted',
             'hired' => 'Hired',
-            'rejected' => 'Rejected',
+            'for_pooling' => 'For Pooling',
             'on_hold' => 'On Hold',
         ];
     }

@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Employer;
 
 use App\Http\Controllers\Controller;
 use App\Models\Application;
+use App\Models\EmployerSubUser;
 use App\Models\EmployerNote;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
@@ -22,13 +24,14 @@ class NoteController extends Controller
             'note' => ['required', 'string', 'max:2000'],
         ]);
 
+        $actor = $request->user();
+
         EmployerNote::create([
             'employer_id' => $employer->id,
             'application_id' => $application->id,
             'note' => $validated['note'],
-            'created_by' => $request->user() instanceof \App\Models\User
-                ? $request->user()->id
-                : null,
+            'created_by' => $actor instanceof User ? $actor->id : null,
+            'created_by_sub_user' => $actor instanceof EmployerSubUser ? $actor->id : null,
         ]);
 
         return redirect()->route('employer.applicants.show', $application)

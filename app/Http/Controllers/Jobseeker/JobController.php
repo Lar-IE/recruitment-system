@@ -8,13 +8,16 @@ use App\Models\Application;
 use App\Models\ApplicationStatus;
 use App\Models\JobPost;
 use App\Notifications\ApplicationSubmitted;
+use App\Services\HybridJobMatcher;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 
 class JobController extends Controller
 {
+    public function __construct(private readonly HybridJobMatcher $hybridMatcher) {}
     public function index(Request $request): View
     {
         $query = JobPost::with('employer.companyProfile')
@@ -154,6 +157,17 @@ class JobController extends Controller
                 $employerUser->notify(new ApplicationSubmitted($application->load(['jobPost', 'jobseeker.user'])));
             }
         });
+
+        try {
+            $this->hybridMatcher->matchAndStore($jobPost, $jobseeker);
+            $this->hybridMatcher->matchJobseekerAgainstEmployerJobs($jobseeker, $jobPost);
+        } catch (\Throwable $e) {
+            Log::error('HybridJobMatcher: Failed to score on application submit', [
+                'job_post_id'  => $jobPost->id,
+                'jobseeker_id' => $jobseeker->id,
+                'message'      => $e->getMessage(),
+            ]);
+        }
 
         return redirect()->route('jobseeker.jobs.show', $jobPost)
             ->with('success', __('Application submitted.'));

@@ -6,6 +6,7 @@ use App\Models\DigitalId;
 use App\Models\Document;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 use Illuminate\View\View;
 
 class DigitalIdVerificationController extends Controller
@@ -20,10 +21,25 @@ class DigitalIdVerificationController extends Controller
             ->whereIn('type', ['sss', 'pagibig', 'philhealth', 'psa'])
             ->get()
             ->keyBy('type');
+        $downloadUrls = [];
+
+        foreach (['sss', 'pagibig', 'philhealth', 'psa'] as $type) {
+            if (isset($documents[$type])) {
+                $downloadUrls[$type] = URL::temporarySignedRoute(
+                    'digital-ids.verify.documents.download',
+                    now()->addMinutes(10),
+                    [
+                        'token' => $digitalId->public_token,
+                        'type' => $type,
+                    ]
+                );
+            }
+        }
 
         return view('digital-ids.verify', [
             'digitalId' => $digitalId,
             'documents' => $documents,
+            'downloadUrls' => $downloadUrls,
         ]);
     }
 
@@ -35,22 +51,14 @@ class DigitalIdVerificationController extends Controller
             abort(404);
         }
 
-        $request->validate([
-            'password' => ['required', 'string'],
-        ]);
-
-        if ((string) $request->string('password') !== (string) $digitalId->employee_identifier) {
-            return back()->withErrors([
-                'password' => __('Incorrect password.'),
-            ]);
-        }
-
         $document = Document::where('jobseeker_id', $digitalId->jobseeker_id)
             ->where('type', $type)
             ->firstOrFail();
 
-        $path = Storage::disk('public')->path($document->file_path);
+        if (! Storage::disk('public')->exists($document->file_path)) {
+            abort(404);
+        }
 
-        return response()->download($path, $type.'-document');
+        return Storage::disk('public')->download($document->file_path, $type.'-document');
     }
 }

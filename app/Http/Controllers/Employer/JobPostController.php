@@ -7,20 +7,28 @@ use App\Http\Requests\Employer\StoreJobPostRequest;
 use App\Http\Requests\Employer\UpdateJobPostRequest;
 use App\Models\JobPost;
 use App\Models\JobPostSkill;
+use App\Services\HybridJobMatcher;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class JobPostController extends Controller
 {
+    public function __construct(private readonly HybridJobMatcher $hybridMatcher) {}
     public function index(Request $request): View
     {
         $employer = $this->requireEmployer($request);
 
         $statusFilter = $request->string('status')->value();
-        $validStatuses = ['published', 'draft', 'closed'];
-        if ($statusFilter && in_array($statusFilter, $validStatuses, true)) {
+        $validStatuses = ['all', 'published', 'draft', 'closed', 'archive'];
+
+        if ($statusFilter === 'archive') {
+            $query = JobPost::where('employer_id', $employer->id)->onlyTrashed();
+        } elseif ($statusFilter === 'all') {
+            $query = JobPost::where('employer_id', $employer->id);
+        } elseif ($statusFilter && in_array($statusFilter, $validStatuses, true)) {
             $query = JobPost::where('employer_id', $employer->id)->where('status', $statusFilter);
         } else {
             $query = JobPost::where('employer_id', $employer->id)->where('status', 'published');
@@ -158,6 +166,15 @@ class JobPostController extends Controller
             'closed_at' => null,
         ]);
 
+        try {
+            $this->hybridMatcher->matchJobApplicants($jobPost);
+        } catch (\Throwable $e) {
+            Log::error('HybridJobMatcher: Failed to run matching on publish', [
+                'job_post_id' => $jobPost->id,
+                'message'     => $e->getMessage(),
+            ]);
+        }
+
         return redirect()->route('employer.job-posts.show', $jobPost)
             ->with('success', __('Job post published.'));
     }
@@ -188,7 +205,7 @@ class JobPostController extends Controller
             'updated_at',
         ]);
 
-        $copy->title = $jobPost->title.' (Copy)';
+        $copy->title = preg_replace('/(\s*\(Copy\))+$/i', '', $jobPost->title) . ' (Copy)';
         $copy->slug = $this->generateUniqueSlug($copy->title);
         $copy->status = 'draft';
         $copy->published_at = null;
@@ -215,6 +232,7 @@ class JobPostController extends Controller
         $employer = $this->requireEmployer($request);
 
         return JobPost::where('employer_id', $employer->id)
+            ->withTrashed()
             ->where('id', $jobPostId)
             ->firstOrFail();
     }

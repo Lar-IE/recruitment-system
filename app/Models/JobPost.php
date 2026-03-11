@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class JobPost extends Model
@@ -55,5 +56,10 @@ class JobPost extends Model
     public function requiredSkills()
     {
         return $this->hasMany(JobPostSkill::class)->orderBy('order');
+    }
+
+    public function jobMatches(): HasMany
+    {
+        return $this->hasMany(JobMatch::class)->orderByDesc('final_score');
     }
 }

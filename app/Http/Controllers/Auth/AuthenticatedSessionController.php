@@ -7,6 +7,7 @@ use App\Http\Requests\Auth\LoginRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Session;
 use Illuminate\View\View;
 
 class AuthenticatedSessionController extends Controller
@@ -27,6 +28,9 @@ class AuthenticatedSessionController extends Controller
         $guard = $request->authenticate();
 
         $request->session()->regenerate();
+        
+        // Set last activity timestamp for session timeout tracking
+        Session::put('last_activity', now());
 
         if ($guard === 'employer_sub_user') {
             // Force session to be written before redirect so the sub-user auth is

@@ -47,6 +47,9 @@ class LoginRequest extends FormRequest
         // Try employer sub-user first so that sub-user accounts (including when the same
         // email exists in both users and employer_sub_users) log in as sub-user.
         if (Auth::guard('employer_sub_user')->attempt($credentials, $remember)) {
+            // Ensure there is never a stale web guard session alongside sub-user.
+            Auth::guard('web')->logout();
+
             $subUser = Auth::guard('employer_sub_user')->user();
             $employer = $subUser?->employer;
 
@@ -65,6 +68,9 @@ class LoginRequest extends FormRequest
         }
 
         if (Auth::attempt($credentials, $remember)) {
+            // Ensure there is never a stale sub-user guard session alongside web.
+            Auth::guard('employer_sub_user')->logout();
+
             RateLimiter::clear($this->throttleKey());
 
             return 'web';

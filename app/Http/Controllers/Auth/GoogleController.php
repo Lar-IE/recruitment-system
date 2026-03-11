@@ -6,7 +6,9 @@ use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Str;
 use Laravel\Socialite\Facades\Socialite;
 
@@ -14,10 +16,15 @@ class GoogleController extends Controller
 {
     public function redirect(): RedirectResponse
     {
-        return Socialite::driver('google')->stateless()->redirect();
+        return Socialite::driver('google')
+            ->stateless()
+            ->with([
+                'prompt' => 'select_account',
+            ])
+            ->redirect();
     }
 
-    public function callback(): RedirectResponse
+    public function callback(Request $request): RedirectResponse
     {
         $googleUser = Socialite::driver('google')->stateless()->user();
 
@@ -46,7 +53,13 @@ class GoogleController extends Controller
             ]);
         }
 
-        Auth::login($user, true);
+        // Ensure only one auth guard remains active after OAuth sign-in.
+        Auth::guard('employer_sub_user')->logout();
+        Auth::guard('web')->login($user, true);
+        Auth::shouldUse('web');
+
+        $request->session()->regenerate();
+        Session::put('last_activity', now());
 
         return redirect()->intended(route('dashboard'));
     }

@@ -10,12 +10,14 @@ use App\Http\Controllers\Admin\EmployerController as AdminEmployerController;
 use App\Http\Controllers\Admin\JobseekerController as AdminJobseekerController;
 use App\Http\Controllers\Admin\PagesController as AdminPagesController;
 use App\Http\Controllers\Admin\SettingsController as AdminSettingsController;
+use App\Http\Controllers\Admin\CmsController as AdminCmsController;
 use App\Http\Controllers\DashboardRedirectController;
 use App\Http\Controllers\DigitalIdVerificationController;
 use App\Http\Controllers\Employer\DashboardController as EmployerDashboardController;
 use App\Http\Controllers\Employer\DigitalIdController as EmployerDigitalIdController;
 use App\Http\Controllers\Employer\DocumentController as EmployerDocumentController;
 use App\Http\Controllers\Employer\JobPostController as EmployerJobPostController;
+use App\Http\Controllers\Employer\VirtualEventController as EmployerVirtualEventController;
 use App\Http\Controllers\Employer\JobseekerDirectoryController;
 use App\Http\Controllers\Employer\ApplicantsController as EmployerApplicantsController;
 use App\Http\Controllers\Employer\PagesController as EmployerPagesController;
@@ -25,16 +27,17 @@ use App\Http\Controllers\Employer\SubUserController as EmployerSubUserController
 use App\Http\Controllers\Employer\CompanyLogoController as EmployerCompanyLogoController;
 use App\Http\Controllers\Employer\CompanyProfileController as EmployerCompanyProfileController;
 use App\Http\Controllers\CompanyController;
+use App\Http\Controllers\PublicJobController;
 use App\Http\Controllers\Jobseeker\DashboardController as JobseekerDashboardController;
 use App\Http\Controllers\Jobseeker\DocumentController as JobseekerDocumentController;
 use App\Http\Controllers\Jobseeker\HistoryController as JobseekerHistoryController;
 use App\Http\Controllers\Jobseeker\JobController as JobseekerJobController;
+use App\Http\Controllers\Jobseeker\VirtualEventController as JobseekerVirtualEventController;
 use App\Http\Controllers\Jobseeker\PagesController as JobseekerPagesController;
 use App\Http\Controllers\Jobseeker\ProfileController as JobseekerProfileController;
 use App\Http\Controllers\Jobseeker\NotificationController as JobseekerNotificationController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
-use App\Http\Middleware\EnsureEmployerApproved;
 
 Route::middleware('maintenance')->group(function () {
     Route::get('/', function () {
@@ -43,15 +46,22 @@ Route::middleware('maintenance')->group(function () {
 
     Route::get('/digital-ids/verify/{token}', [DigitalIdVerificationController::class, 'show'])
         ->name('digital-ids.verify');
-    Route::post('/digital-ids/verify/{token}/documents/{type}/download', [DigitalIdVerificationController::class, 'download'])
+    Route::get('/digital-ids/verify/{token}/documents/{type}/download', [DigitalIdVerificationController::class, 'download'])
+        ->middleware(['signed', 'throttle:10,1'])
         ->name('digital-ids.verify.documents.download');
 
-    Route::get('/company/{employer}', [CompanyController::class, 'show'])
-        ->name('company.show');
+    Route::get('/jobs/{slug}', [PublicJobController::class, 'show'])
+        ->where('slug', '[A-Za-z0-9-]+')
+        ->name('jobs.public.show');
 
     Route::get('/dashboard', DashboardRedirectController::class)
         ->middleware(['auth', 'verified', 'active'])
         ->name('dashboard');
+
+    Route::middleware(['auth'])->group(function () {
+        Route::get('/company/{employer}', [CompanyController::class, 'show'])
+            ->name('company.show');
+    });
 
     Route::middleware(['auth', 'verified', 'active', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
         Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
@@ -63,6 +73,7 @@ Route::middleware('maintenance')->group(function () {
         Route::post('/employers/{employer}/approve', [AdminEmployerController::class, 'approve'])->name('employers.approve');
         Route::post('/employers/{employer}/suspend', [AdminEmployerController::class, 'suspend'])->name('employers.suspend');
         Route::post('/employers/{employer}/activate', [AdminEmployerController::class, 'activate'])->name('employers.activate');
+        Route::post('/employers/{employer}/jobseeker-directory-access', [AdminEmployerController::class, 'toggleJobseekerDirectoryAccess'])->name('employers.jobseeker-directory-access');
         Route::get('/jobseekers', [AdminJobseekerController::class, 'index'])->name('jobseekers');
         Route::post('/jobseekers/{jobseeker}/suspend', [AdminJobseekerController::class, 'suspend'])->name('jobseekers.suspend');
         Route::post('/jobseekers/{jobseeker}/activate', [AdminJobseekerController::class, 'activate'])->name('jobseekers.activate');
@@ -79,6 +90,8 @@ Route::middleware('maintenance')->group(function () {
         Route::get('/settings', [AdminSettingsController::class, 'index'])->name('settings');
         Route::post('/settings', [AdminSettingsController::class, 'update'])->name('settings.update');
         Route::post('/settings/toggle-maintenance', [AdminSettingsController::class, 'toggleMaintenance'])->name('settings.toggle-maintenance');
+        Route::get('/cms', [AdminCmsController::class, 'index'])->name('cms.index');
+        Route::post('/cms', [AdminCmsController::class, 'update'])->name('cms.update');
     });
 
     Route::middleware(['auth', 'active', 'role:employer'])->prefix('employer')->name('employer.')->group(function () {
@@ -124,20 +137,31 @@ Route::middleware('maintenance')->group(function () {
             ->middleware('employer.role:admin,recruiter')
             ->whereNumber('jobPost')
             ->name('job-posts.duplicate');
-        Route::get('/jobseekers', [JobseekerDirectoryController::class, 'index'])
-            ->middleware('employer.role:admin,recruiter,viewer')
-            ->name('jobseekers.index');
-        Route::get('/jobseekers/template', [JobseekerDirectoryController::class, 'downloadTemplate'])
-            ->middleware('employer.role:admin,recruiter,viewer')
-            ->name('jobseekers.template');
-        Route::get('/jobseekers/export', [JobseekerDirectoryController::class, 'export'])
-            ->middleware('employer.role:admin,recruiter,viewer')
-            ->name('jobseekers.export');
-        Route::post('/jobseekers/import', [JobseekerDirectoryController::class, 'import'])
+        Route::resource('virtual-events', EmployerVirtualEventController::class)
             ->middleware('employer.role:admin,recruiter')
-            ->name('jobseekers.import');
-        Route::get('/jobseekers/{jobseeker}', [JobseekerDirectoryController::class, 'show'])
+            ->except(['show']);
+        Route::get('/virtual-events/{virtualEvent}', [EmployerVirtualEventController::class, 'show'])
             ->middleware('employer.role:admin,recruiter,viewer')
+            ->whereNumber('virtualEvent')
+            ->name('virtual-events.show');
+        Route::post('/virtual-events/{virtualEvent}/cancel', [EmployerVirtualEventController::class, 'cancel'])
+            ->middleware('employer.role:admin,recruiter')
+            ->whereNumber('virtualEvent')
+            ->name('virtual-events.cancel');
+        Route::get('/jobseeker-directory', [JobseekerDirectoryController::class, 'index'])
+            ->middleware(['employer.role:admin,recruiter,viewer', 'employer.jobseeker-directory-access'])
+            ->name('jobseekers.index');
+        Route::get('/jobseeker-directory/template', [JobseekerDirectoryController::class, 'downloadTemplate'])
+            ->middleware(['employer.role:admin,recruiter,viewer', 'employer.jobseeker-directory-access'])
+            ->name('jobseekers.template');
+        Route::get('/jobseeker-directory/export', [JobseekerDirectoryController::class, 'export'])
+            ->middleware(['employer.role:admin,recruiter,viewer', 'employer.jobseeker-directory-access'])
+            ->name('jobseekers.export');
+        Route::post('/jobseeker-directory/import', [JobseekerDirectoryController::class, 'import'])
+            ->middleware(['employer.role:admin,recruiter', 'employer.jobseeker-directory-access'])
+            ->name('jobseekers.import');
+        Route::get('/jobseeker-directory/{jobseeker}', [JobseekerDirectoryController::class, 'show'])
+            ->middleware(['employer.role:admin,recruiter,viewer', 'employer.jobseeker-directory-access'])
             ->whereNumber('jobseeker')
             ->name('jobseekers.show');
         Route::get('/applicants', [EmployerApplicantsController::class, 'index'])
@@ -167,6 +191,9 @@ Route::middleware('maintenance')->group(function () {
         Route::get('/ats', [EmployerAtsController::class, 'index'])
             ->middleware('employer.role:admin,recruiter,viewer')
             ->name('ats');
+        Route::get('/ats/{application}', [EmployerAtsController::class, 'show'])
+            ->middleware('employer.role:admin,recruiter,viewer')
+            ->name('ats.show');
         Route::post('/ats/{application}/status', [EmployerAtsController::class, 'updateStatus'])
             ->middleware('employer.role:admin,recruiter')
             ->name('ats.status');
@@ -249,11 +276,15 @@ Route::middleware('maintenance')->group(function () {
         Route::get('/jobs', [JobseekerJobController::class, 'index'])->name('jobs');
         Route::get('/jobs/{jobPost}', [JobseekerJobController::class, 'show'])->name('jobs.show');
         Route::post('/jobs/{jobPost}/apply', [JobseekerJobController::class, 'apply'])->name('jobs.apply');
+        Route::get('/virtual-events', [JobseekerVirtualEventController::class, 'index'])->name('virtual-events.index');
+        Route::get('/virtual-events/{virtualEvent}', [JobseekerVirtualEventController::class, 'show'])->name('virtual-events.show');
+        Route::post('/virtual-events/{virtualEvent}/register', [JobseekerVirtualEventController::class, 'register'])->name('virtual-events.register');
         Route::get('/documents', [JobseekerDocumentController::class, 'index'])->name('documents');
         Route::post('/documents', [JobseekerDocumentController::class, 'store'])->name('documents.store');
         Route::post('/documents/upload-all', [JobseekerDocumentController::class, 'storeBatch'])->name('documents.store-all');
         Route::get('/documents/{document}', [JobseekerDocumentController::class, 'show'])->name('documents.show');
         Route::get('/documents/{document}/download', [JobseekerDocumentController::class, 'download'])->name('documents.download');
+        Route::delete('/documents/{document}', [JobseekerDocumentController::class, 'destroy'])->name('documents.destroy');
         Route::get('/digital-id', [JobseekerPagesController::class, 'digitalId'])->name('digital-id');
         Route::post('/digital-id/photo', [\App\Http\Controllers\Jobseeker\DigitalIdController::class, 'updatePhoto'])->name('digital-id.photo');
         Route::get('/history', [JobseekerHistoryController::class, 'index'])->name('history');

@@ -1,13 +1,20 @@
 @php
-    use Illuminate\Support\Str;
-
     $user = Auth::user();
     
     // Get the first education entry for summary
     $firstEducation = $jobseeker->educations->first();
-    $educationSummary = Str::of($firstEducation 
-    ? ($firstEducation->degree ? $firstEducation->degree . ' - ' : '') . $firstEducation->institution
-    : '');
+    $educationPrimaryLine = '';
+    $educationSchoolLine = '';
+    if ($firstEducation) {
+        $educationPrimaryLine = trim(implode(' in ', array_filter([
+            $firstEducation->degree,
+            $firstEducation->field_of_study,
+        ])));
+        if ($educationPrimaryLine === '') {
+            $educationPrimaryLine = $firstEducation->field_of_study ?: ($firstEducation->degree ?: '');
+        }
+        $educationSchoolLine = (string) ($firstEducation->institution ?? '');
+    }
     
     $skillItems = collect(preg_split("/\r\n|\r|\n/", $jobseeker->skills ?? ''))
         ->map(fn ($item) => trim($item))
@@ -71,7 +78,12 @@
                         </div>
                         <div>
                             <p class="text-xs font-bold text-gray-800">{{ __('Education Details') }}</p>
-                            <p>{{ $educationSummary ? $educationSummary : '-' }}</p>
+                            @if ($educationPrimaryLine !== '' || $educationSchoolLine !== '')
+                                <p>{{ $educationPrimaryLine !== '' ? $educationPrimaryLine : '-' }}</p>
+                                <p class="text-xs text-gray-500">{{ $educationSchoolLine !== '' ? $educationSchoolLine : '-' }}</p>
+                            @else
+                                <p>-</p>
+                            @endif
                         </div>
                         <div>
                             <p class="text-xs font-bold text-gray-800">{{ __('Gender') }}</p>

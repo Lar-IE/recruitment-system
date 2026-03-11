@@ -3,9 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Admin\ReviewDocumentRequest;
 use App\Models\Document;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -30,32 +28,6 @@ class DocumentReviewController extends Controller
             'filters' => $request->only(['status', 'type']),
             'types' => $this->documentTypes(),
         ]);
-    }
-
-    public function approve(ReviewDocumentRequest $request, Document $document): RedirectResponse
-    {
-        $document->update([
-            'status' => 'approved',
-            'reviewed_by' => $request->user()->id,
-            'reviewed_at' => now(),
-            'remarks' => $request->input('remarks'),
-        ]);
-
-        return redirect()->route('admin.documents')
-            ->with('success', __('Document approved.'));
-    }
-
-    public function reject(ReviewDocumentRequest $request, Document $document): RedirectResponse
-    {
-        $document->update([
-            'status' => 'rejected',
-            'reviewed_by' => $request->user()->id,
-            'reviewed_at' => now(),
-            'remarks' => $request->input('remarks'),
-        ]);
-
-        return redirect()->route('admin.documents')
-            ->with('success', __('Document rejected.'));
     }
 
     private function documentTypes(): array

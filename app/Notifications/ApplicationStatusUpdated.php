@@ -7,6 +7,7 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
 
 class ApplicationStatusUpdated extends Notification
 {
@@ -29,7 +30,10 @@ class ApplicationStatusUpdated extends Notification
     public function toMail(object $notifiable): MailMessage
     {
         $jobTitle = $this->application->jobPost->title ?? 'Job';
-        $status = ucfirst($this->application->current_status);
+        $status = Str::of($this->application->current_status)
+            ->replace('_', ' ')
+            ->title()
+            ->value();
 
         $mail = (new MailMessage)
             ->subject(__('Application update: :job', ['job' => $jobTitle]))
@@ -41,7 +45,7 @@ class ApplicationStatusUpdated extends Notification
             $mail->line(__('Note: :note', ['note' => $this->note]));
         }
 
-        if ($this->application->current_status === 'interview_scheduled') {
+        if ($this->application->current_status === 'schedule_interview') {
             if ($this->interviewAt) {
                 $mail->line(__('Interview schedule: :date', [
                     'date' => Carbon::parse($this->interviewAt)->format('M d, Y h:i A'),

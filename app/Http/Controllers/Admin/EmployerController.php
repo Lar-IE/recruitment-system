@@ -72,4 +72,18 @@ class EmployerController extends Controller
         return redirect()->route('admin.employers')
             ->with('success', __('Employer activated.'));
     }
+
+    public function toggleJobseekerDirectoryAccess(Request $request, Employer $employer): RedirectResponse
+    {
+        $employer->update([
+            'jobseeker_directory_access' => ! $employer->jobseeker_directory_access,
+        ]);
+
+        $message = $employer->jobseeker_directory_access
+            ? __('Jobseeker Directory access enabled.')
+            : __('Jobseeker Directory access disabled.');
+
+        return redirect()->route('admin.employers')
+            ->with('success', $message);
+    }
 }

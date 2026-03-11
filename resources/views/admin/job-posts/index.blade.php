@@ -1,17 +1,13 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+        <h2 class="text-xl font-semibold text-gray-900 leading-tight">
             {{ __('Job Posts') }}
         </h2>
     </x-slot>
 
-    <div class="py-8">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                <div class="p-6 text-gray-900">
-                    {{ __('Job post approvals and status controls will appear here.') }}
-                </div>
-            </div>
-        </div>
+    <div class="space-y-6">
+        <x-ui.card>
+            <p class="text-sm text-gray-600">{{ __('Job post approvals and status controls will appear here.') }}</p>
+        </x-ui.card>
     </div>
 </x-app-layout>

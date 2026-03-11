@@ -39,7 +39,7 @@ class DashboardController extends Controller
 
             $pending = Application::whereHas('jobPost', function ($query) use ($employer) {
                 $query->where('employer_id', $employer->id);
-            })->whereIn('current_status', ['new', 'under_review'])->count();
+            })->whereIn('current_status', ['new', 'for_review'])->count();
 
             $recentApplications = Application::with(['jobPost', 'jobseeker.user'])
                 ->whereHas('jobPost', function ($query) use ($employer) {

@@ -21,11 +21,13 @@ class Employer extends Model
         'address',
         'company_logo',
         'status',
+        'jobseeker_directory_access',
         'approved_at',
         'suspended_at',
     ];
 
     protected $casts = [
+        'jobseeker_directory_access' => 'boolean',
         'approved_at' => 'datetime',
         'suspended_at' => 'datetime',
     ];
@@ -53,5 +55,10 @@ class Employer extends Model
     public function companyProfile()
     {
         return $this->hasOne(CompanyProfile::class);
+    }
+
+    public function virtualEvents()
+    {
+        return $this->hasMany(VirtualEvent::class);
     }
 }

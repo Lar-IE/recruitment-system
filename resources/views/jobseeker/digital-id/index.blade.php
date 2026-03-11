@@ -23,8 +23,6 @@
                             </div>
                         @else
                         @php
-                            $verifyUrl = route('digital-ids.verify', $digitalId->public_token);
-                            $qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=120x120&data='.urlencode($verifyUrl);
                             $photoUrl = $digitalId->photo_path ? asset('storage/'.$digitalId->photo_path) : null;
                         @endphp
 
@@ -82,12 +80,6 @@
                                             <p class="font-semibold">{{ ucfirst($digitalId->status) }}</p>
                                         </div>
                                     </div>
-                                    </div>
-                                    <div class="absolute right-4 bottom-4 text-right space-y-2">
-                                        <img src="{{ $qrUrl }}" alt="{{ __('QR Code') }}" class="h-20 w-20 rounded-md border border-white/30 bg-white">
-                                        <a href="{{ $verifyUrl }}" target="_blank" class="inline-flex items-center justify-center rounded-md bg-white/90 px-2 py-1 text-[10px] font-semibold text-indigo-700 hover:bg-white">
-                                            {{ __('Open Verification Page') }}
-                                        </a>
                                     </div>
                                 </div>
 

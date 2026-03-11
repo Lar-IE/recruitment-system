@@ -21,12 +21,21 @@
                                 <div class="border rounded-lg p-4 {{ $notification->read_at ? 'bg-white' : 'bg-indigo-50' }}">
                                     <div class="flex items-center justify-between">
                                         <div>
-                                            <p class="text-sm font-semibold">
-                                                {{ __('Application Update') }} - {{ $data['job_title'] ?? __('Job') }}
-                                            </p>
-                                            <p class="text-xs text-gray-500">
-                                                {{ __('Employer: :name', ['name' => $data['employer'] ?? __('Employer')]) }}
-                                            </p>
+                                            @if (($data['type'] ?? '') === 'virtual_event_created')
+                                                <p class="text-sm font-semibold">
+                                                    {{ __('New Virtual Event') }} - {{ $data['title'] ?? __('Event') }}
+                                                </p>
+                                                <p class="text-xs text-gray-500">
+                                                    {{ __('Date: :date', ['date' => $data['date'] ?? '']) }} | {{ __('Platform: :platform', ['platform' => $data['platform'] ?? '']) }}
+                                                </p>
+                                            @else
+                                                <p class="text-sm font-semibold">
+                                                    {{ __('Application Update') }} - {{ $data['job_title'] ?? __('Job') }}
+                                                </p>
+                                                <p class="text-xs text-gray-500">
+                                                    {{ __('Employer: :name', ['name' => $data['employer'] ?? __('Employer')]) }}
+                                                </p>
+                                            @endif
                                         </div>
                                         <span class="text-xs text-gray-500">{{ $notification->created_at?->format('M d, Y H:i') }}</span>
                                     </div>
@@ -38,6 +47,16 @@
                                         @if (! empty($data['remarks']))
                                             <p class="mt-2 text-sm text-gray-600">{{ $data['remarks'] }}</p>
                                         @endif
+                                    @elseif (($data['type'] ?? '') === 'virtual_event_created')
+                                        <p class="mt-2 text-sm text-gray-700">
+                                            {{ __('A new virtual hiring event has been created.') }}
+                                        </p>
+                                        <p class="mt-1 text-sm text-gray-600">
+                                            {{ __('Event: :title', ['title' => $data['title'] ?? __('Event')]) }}
+                                        </p>
+                                        <p class="mt-1 text-sm text-gray-600">
+                                            {{ __('Date: :date', ['date' => $data['date'] ?? '']) }} | {{ __('Platform: :platform', ['platform' => $data['platform'] ?? '']) }}
+                                        </p>
                                     @else
                                         <p class="mt-2 text-sm text-gray-700">
                                             {{ __('Status: :status', ['status' => Str::of($data['status'] ?? '')->replace('_', ' ')->title()]) }}
@@ -48,9 +67,15 @@
                                     @endif
 
                                     <div class="mt-3">
-                                        <a href="{{ route('jobseeker.notifications.read', $notification->id) }}" class="text-sm text-indigo-600 hover:text-indigo-900">
-                                            {{ ($data['type'] ?? '') === 'document_update_requested' ? __('View Documents') : __('View Application') }}
-                                        </a>
+                                        @if (($data['type'] ?? '') === 'virtual_event_created')
+                                            <a href="{{ route('jobseeker.virtual-events.show', $data['virtual_event_id'] ?? '#') }}" class="text-sm text-indigo-600 hover:text-indigo-900">
+                                                {{ __('View Event Details') }}
+                                            </a>
+                                        @else
+                                            <a href="{{ route('jobseeker.notifications.read', $notification->id) }}" class="text-sm text-indigo-600 hover:text-indigo-900">
+                                                {{ ($data['type'] ?? '') === 'document_update_requested' ? __('View Documents') : __('View Application') }}
+                                            </a>
+                                        @endif
                                     </div>
                                 </div>
                             @endforeach

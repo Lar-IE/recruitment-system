@@ -45,6 +45,15 @@
                         <a href="{{ asset('storage/'.$document->file_path) }}" target="_blank" class="text-sm text-gray-600 hover:text-gray-900">
                             {{ __('View File') }}
                         </a>
+                        @if (!$isHired)
+                            <form method="POST" action="{{ route('jobseeker.documents.destroy', $document) }}" onsubmit="return confirm('{{ __('Are you sure you want to remove this document? This action cannot be undone.') }}')" class="inline">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="text-sm text-red-600 hover:text-red-900">
+                                    {{ __('Remove') }}
+                                </button>
+                            </form>
+                        @endif
                     </div>
                 </div>
             </div>

@@ -3,6 +3,9 @@
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
             {{ __('Employer Sub-Users') }}
         </h2>
+        <p class="mt-1 text-sm text-gray-500">
+            {{ __('Manage additional user accounts within your company. Assign roles and permissions to team members who will assist in managing job postings, applicants, and recruitment activities.') }}
+        </p>
     </x-slot>
 
     <div class="py-8">

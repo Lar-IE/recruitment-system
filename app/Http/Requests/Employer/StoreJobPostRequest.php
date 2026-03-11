@@ -30,8 +30,8 @@ class StoreJobPostRequest extends FormRequest
             'status' => ['nullable', 'in:draft,published,closed'],
             'application_deadline' => ['nullable', 'date'],
             'required_skills' => ['nullable', 'array'],
-            'required_skills.*.skill_name' => ['required', 'string', 'max:255'],
-            'required_skills.*.weight' => ['nullable', 'integer', 'min:1', 'max:10'],
+            'required_skills.*.skill_name' => ['nullable', 'string', 'max:255'],
+            'required_skills.*.weight' => ['nullable', 'integer', 'min:1', 'max:3'],
             'required_skills.*.min_proficiency' => ['nullable', 'integer', 'min:0', 'max:100'],
         ];
     }

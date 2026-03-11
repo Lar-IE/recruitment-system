@@ -14,6 +14,79 @@ use Illuminate\Support\Collection;
  */
 class CandidateMatchingService
 {
+    /** Default minimum match percentage for job recommendations. */
+    public const DEFAULT_RECOMMENDATION_THRESHOLD = 0;
+
+    /**
+     * Get recommended jobs for a jobseeker based on skill match.
+     * Match % = (Σ (Job Skill Weight × Jobseeker Proficiency %) / Σ (Job Skill Weight)) × 100
+     * Only returns jobs meeting the threshold (default 80%).
+     *
+     * @param  array{threshold?: int, limit?: int, location?: string, job_type?: string}  $options
+     * @return array<int, array{
+     *   job_post: JobPost,
+     *   score: float,
+     *   match_percentage: float,
+     *   matched_skills: array<array{skill_name: string, job_weight: int, proficiency: int, contribution: float}>
+     * }>
+     */
+    public function getRecommendedJobsForJobseeker(Jobseeker $jobseeker, array $options = []): array
+    {
+        $threshold = $options['threshold'] ?? self::DEFAULT_RECOMMENDATION_THRESHOLD;
+        $limit = $options['limit'] ?? 20;
+        $location = $options['location'] ?? null;
+        $jobType = $options['job_type'] ?? null;
+
+        $jobseeker->load('skillsList');
+        if ($jobseeker->skillsList->isEmpty()) {
+            return [];
+        }
+
+        $query = JobPost::with(['employer.companyProfile', 'requiredSkills'])
+            ->where('status', 'published')
+            ->whereHas('requiredSkills');
+
+        if ($location) {
+            $query->where('location', 'like', '%' . trim($location) . '%');
+        }
+        if ($jobType) {
+            $query->where('job_type', $jobType);
+        }
+
+        $jobPosts = $query->get();
+
+        $scored = [];
+        foreach ($jobPosts as $jobPost) {
+            $requiredSkills = $jobPost->requiredSkills;
+            if ($requiredSkills->isEmpty()) {
+                continue;
+            }
+
+            $result = $this->calculateScore($jobseeker, $requiredSkills);
+            if ($result['score'] <= 0) {
+                continue;
+            }
+
+            $maxScore = 0.0;
+            foreach ($requiredSkills as $jobSkill) {
+                $maxScore += $jobSkill->weight ?: 1;
+            }
+            $matchPercentage = $maxScore > 0 ? round(($result['score'] / $maxScore) * 100, 1) : 0;
+
+            if ($matchPercentage >= $threshold) {
+                $scored[] = [
+                    'job_post' => $jobPost,
+                    'score' => $result['score'],
+                    'match_percentage' => $matchPercentage,
+                    'matched_skills' => $result['matched_skills'],
+                ];
+            }
+        }
+
+        usort($scored, fn ($a, $b) => $b['match_percentage'] <=> $a['match_percentage']);
+
+        return array_slice($scored, 0, $limit);
+    }
     /**
      * Get ranked candidates for a job post based on skill match (applicants only).
      *

@@ -31,7 +31,7 @@
                                                 <p class="text-xs text-gray-500">{{ $application->jobseeker->user->email ?? '' }}</p>
                                             </td>
                                             <td class="py-3 pr-4">{{ $application->jobPost->title ?? __('N/A') }}</td>
-                                            <td class="py-3 pr-4">{{ ucfirst($application->current_status) }}</td>
+                                            <td class="py-3 pr-4">{{ \Illuminate\Support\Str::of($application->current_status)->replace('_', ' ')->title() }}</td>
                                             <td class="py-3 pr-4">{{ $application->applied_at?->format('M d, Y') }}</td>
                                             <td class="py-3 pr-4">
                                                 @if ($application->notes->isEmpty())

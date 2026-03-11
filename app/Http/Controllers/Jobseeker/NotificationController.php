@@ -21,18 +21,6 @@ class NotificationController extends Controller
         ]);
     }
 
-    public function markRead(Request $request, string $notificationId): RedirectResponse
-    {
-        $notification = $request->user()
-            ->notifications()
-            ->where('id', $notificationId)
-            ->firstOrFail();
-
-        $notification->markAsRead();
-
-        return redirect()->route('jobseeker.notifications');
-    }
-
     public function markReadAndRedirect(Request $request, string $notificationId): RedirectResponse
     {
         $notification = $request->user()
@@ -44,6 +32,11 @@ class NotificationController extends Controller
 
         $applicationId = $notification->data['application_id'] ?? null;
         $docType = $notification->data['document_type'] ?? null;
+        $virtualEventId = $notification->data['virtual_event_id'] ?? null;
+
+        if ($virtualEventId) {
+            return redirect()->route('jobseeker.virtual-events.show', $virtualEventId);
+        }
 
         if ($applicationId) {
             return redirect()->route('jobseeker.history.show', [$applicationId, 'from' => 'notifications']);

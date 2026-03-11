@@ -11,6 +11,7 @@ class EmployerNote extends Model
         'application_id',
         'note',
         'created_by',
+        'created_by_sub_user',
     ];
 
     public function employer()
@@ -26,5 +27,10 @@ class EmployerNote extends Model
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function creatorSubUser()
+    {
+        return $this->belongsTo(EmployerSubUser::class, 'created_by_sub_user');
     }
 }

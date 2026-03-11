@@ -22,11 +22,11 @@
 
     $statusStyles = [
         'new' => 'bg-blue-100 text-blue-700 ring-blue-200',
-        'under_review' => 'bg-amber-100 text-amber-700 ring-amber-200',
-        'interview_scheduled' => 'bg-indigo-100 text-indigo-700 ring-indigo-200',
+        'for_review' => 'bg-amber-100 text-amber-700 ring-amber-200',
+        'schedule_interview' => 'bg-indigo-100 text-indigo-700 ring-indigo-200',
         'shortlisted' => 'bg-purple-100 text-purple-700 ring-purple-200',
         'hired' => 'bg-emerald-100 text-emerald-700 ring-emerald-200',
-        'rejected' => 'bg-rose-100 text-rose-700 ring-rose-200',
+        'for_pooling' => 'bg-rose-100 text-rose-700 ring-rose-200',
         'on_hold' => 'bg-slate-100 text-slate-700 ring-slate-200',
     ];
     $statusKey = $application->current_status;
@@ -373,7 +373,7 @@
                                     <div class="border rounded-lg p-3" x-data="{ editing: false }">
                                         <div class="flex items-center justify-between">
                                             <p class="text-xs text-gray-500">
-                                                {{ __('By :name on :date', ['name' => $note->creator->name ?? __('Employer'), 'date' => $note->created_at?->format('M d, Y H:i')]) }}
+                                                {{ __('By :name on :date', ['name' => $note->creatorSubUser->name ?? $note->creator->name ?? __('Employer'), 'date' => $note->created_at?->format('M d, Y H:i')]) }}
                                             </p>
                                             <div class="flex items-center gap-2 text-xs">
                                                 <button type="button" class="text-indigo-600 hover:text-indigo-900" x-on:click="editing = !editing">
@@ -424,7 +424,7 @@
                                         @foreach ($otherApplications as $other)
                                             <tr class="border-t align-top">
                                                 <td class="py-3 px-4">{{ $other->jobPost->title ?? __('N/A') }}</td>
-                                                <td class="py-3 px-4 whitespace-nowrap">{{ $statuses[$other->current_status] ?? ucfirst($other->current_status) }}</td>
+                                                <td class="py-3 px-4 whitespace-nowrap">{{ $statuses[$other->current_status] ?? Str::of($other->current_status)->replace('_', ' ')->title() }}</td>
                                                 <td class="py-3 px-4 whitespace-nowrap">{{ $other->applied_at?->format('M d, Y') }}</td>
                                             </tr>
                                         @endforeach

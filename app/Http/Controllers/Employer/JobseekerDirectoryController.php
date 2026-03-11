@@ -15,6 +15,10 @@ class JobseekerDirectoryController extends Controller
     public function index(Request $request): View
     {
         $employer = $request->attributes->get('employer') ?? $request->user()->employer;
+        if (! $employer) {
+            abort(403);
+        }
+
         $sort = $request->string('sort')->value();
         $direction = strtolower($request->string('dir')->value()) === 'asc' ? 'asc' : 'desc';
         $sortable = [
@@ -27,7 +31,7 @@ class JobseekerDirectoryController extends Controller
             'status' => 'jobseekers.status',
         ];
 
-        $query = Jobseeker::query()
+        $query = $this->directoryJobseekersQuery()
             ->select('jobseekers.*')
             ->join('users', 'users.id', '=', 'jobseekers.user_id')
             ->with(['user', 'workExperiences']);
@@ -90,27 +94,29 @@ class JobseekerDirectoryController extends Controller
         }
 
         if ($request->filled('job_post_id')) {
-            $query->join('applications', 'applications.jobseeker_id', '=', 'jobseekers.id')
-                ->where('applications.job_post_id', $request->integer('job_post_id'))
-                ->distinct('jobseekers.id');
+            $jobPostId = $request->integer('job_post_id');
+            $query->whereHas('applications.jobPost', function ($builder) use ($employer, $jobPostId) {
+                $builder->where('employer_id', $employer->id)
+                    ->where('job_posts.id', $jobPostId);
+            });
         }
 
         $sortColumn = $sortable[$sort] ?? 'jobseekers.created_at';
         $query->orderBy($sortColumn, $direction);
 
         $jobseekers = $query->paginate(12)->withQueryString();
-        $jobPosts = $employer?->jobPosts()->orderBy('title')->get(['id', 'title']) ?? collect();
-        $cities = Jobseeker::query()
+        $jobPosts = $employer->jobPosts()->orderBy('title')->get(['id', 'title']);
+        $cities = $this->directoryJobseekersQuery()
             ->whereNotNull('city')
             ->distinct()
             ->orderBy('city')
             ->pluck('city');
-        $genders = Jobseeker::query()
+        $genders = $this->directoryJobseekersQuery()
             ->whereNotNull('gender')
             ->distinct()
             ->orderBy('gender')
             ->pluck('gender');
-        $educationalAttainments = Jobseeker::query()
+        $educationalAttainments = $this->directoryJobseekersQuery()
             ->whereNotNull('educational_attainment')
             ->distinct()
             ->orderBy('educational_attainment')
@@ -130,6 +136,19 @@ class JobseekerDirectoryController extends Controller
 
     public function show(Request $request, Jobseeker $jobseeker): View
     {
+        $employer = $request->attributes->get('employer') ?? $request->user()->employer;
+        if (! $employer) {
+            abort(403);
+        }
+
+        $canAccess = $this->directoryJobseekersQuery()
+            ->whereKey($jobseeker->id)
+            ->exists();
+
+        if (! $canAccess) {
+            abort(403);
+        }
+
         $jobseeker->load(['user', 'documents', 'educations', 'workExperiences']);
 
         return view('employer.jobseekers.show', [
@@ -169,14 +188,31 @@ class JobseekerDirectoryController extends Controller
     public function import(Request $request)
     {
         $request->validate([
-            'file' => 'required|file|mimes:csv,xlsx,xls,txt',
+            'file' => ['required', 'file', 'mimes:csv,txt', 'max:2048'],
         ]);
+
+        $employer = $request->attributes->get('employer') ?? $request->user()->employer;
+        if (! $employer) {
+            abort(403);
+        }
 
         $file = $request->file('file');
         $handle = fopen($file->getRealPath(), 'r');
-        
-        // Skip header row
-        fgetcsv($handle);
+        if (! $handle) {
+            return redirect()->route('employer.jobseekers.index')
+                ->withErrors(['file' => __('Unable to read the uploaded file.')]);
+        }
+
+        $header = fgetcsv($handle);
+        $expectedHeader = ['first_name', 'middle_name', 'last_name', 'email', 'phone', 'city', 'educational_attainment', 'gender', 'birth_date', 'skills'];
+        $normalizedHeader = array_map(static fn ($value) => strtolower(trim((string) $value)), $header ?: []);
+
+        if ($normalizedHeader !== $expectedHeader) {
+            fclose($handle);
+
+            return redirect()->route('employer.jobseekers.index')
+                ->withErrors(['file' => __('Invalid CSV header format.')]);
+        }
         
         $imported = 0;
         $validEducationalAttainments = ['Elementary Graduate', 'High School Graduate', 'Vocational Graduate', 'College Undergraduate', 'College Graduate', 'Post Graduate'];
@@ -280,7 +316,12 @@ class JobseekerDirectoryController extends Controller
 
     public function export(Request $request): StreamedResponse
     {
-        $query = Jobseeker::query()
+        $employer = $request->attributes->get('employer') ?? $request->user()->employer;
+        if (! $employer) {
+            abort(403);
+        }
+
+        $query = $this->directoryJobseekersQuery()
             ->join('users', 'users.id', '=', 'jobseekers.user_id')
             ->select('jobseekers.*');
 
@@ -429,5 +470,12 @@ class JobseekerDirectoryController extends Controller
         };
 
         return response()->stream($callback, 200, $headers);
+    }
+
+    private function directoryJobseekersQuery()
+    {
+        return Jobseeker::query()->whereHas('user', function ($builder) {
+            $builder->where('role', UserRole::Jobseeker->value);
+        });
     }
 }

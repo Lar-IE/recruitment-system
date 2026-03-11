@@ -13,14 +13,6 @@
     <div class="py-8">
         <div class="max-w-6xl mx-auto sm:px-6 lg:px-8">
             @php
-                $qrPayload = json_encode([
-                    'company' => $digitalId->company_name,
-                    'employee_id' => $digitalId->employee_identifier,
-                    'job_title' => $digitalId->job_title,
-                    'issued' => optional($digitalId->issue_date)->format('Y-m-d'),
-                    'status' => $digitalId->status,
-                ]);
-                $qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=120x120&data='.urlencode($qrPayload);
                 $photoUrl = $digitalId->photo_path ? asset('storage/'.$digitalId->photo_path) : null;
             @endphp
 
@@ -79,9 +71,6 @@
                                     <p class="font-semibold">{{ ucfirst($digitalId->status) }}</p>
                                 </div>
                             </div>
-                            </div>
-                            <div class="absolute right-4 bottom-4">
-                                <img src="{{ $qrUrl }}" alt="{{ __('QR Code') }}" class="h-20 w-20 rounded-md border border-white/30 bg-white">
                             </div>
                         </div>
 

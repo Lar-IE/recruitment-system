@@ -8,31 +8,6 @@ use Illuminate\View\View;
 
 class PagesController extends Controller
 {
-    public function pending(): View
-    {
-        return view('employer.pending');
-    }
-
-    public function jobPosts(): View
-    {
-        return view('employer.job-posts.index');
-    }
-
-    public function applicants(): View
-    {
-        return view('employer.applicants.index');
-    }
-
-    public function ats(): View
-    {
-        return view('employer.ats.index');
-    }
-
-    public function digitalIds(): View
-    {
-        return view('employer.digital-ids.index');
-    }
-
     public function companySettings(Request $request): View
     {
         $employer = $request->attributes->get('employer');

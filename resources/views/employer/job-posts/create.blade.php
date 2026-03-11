@@ -62,29 +62,45 @@
 
                         @php
                             $oldSkills = old('required_skills', []);
+                            $skillsInput = array_values(is_array($oldSkills) ? $oldSkills : []);
+                            if (count($skillsInput) === 0) {
+                                $skillsInput[] = ['skill_name' => '', 'weight' => 1, 'min_proficiency' => ''];
+                            }
+                            if (count($skillsInput) < 5) {
+                                $skillsInput = array_merge(
+                                    $skillsInput,
+                                    array_fill(0, 5 - count($skillsInput), ['skill_name' => '', 'weight' => 1, 'min_proficiency' => ''])
+                                );
+                            }
                         @endphp
-                        <div x-data="requiredSkillsManager(@js($oldSkills))">
+                        <div>
                             <x-input-label :value="__('Required Skills (for candidate matching)')" />
-                            <p class="mt-1 text-sm text-gray-600">{{ __('Specify skills and optional weight (1–10). Candidates with matching skills will be ranked by proficiency.') }}</p>
-                            <template x-for="(skill, index) in skills" :key="index">
+                            <p class="mt-1 text-sm text-gray-600">
+                                {{ __('Specify skills and importance (1–3): 1 = not important, 2 = important, 3 = very important. Candidates with matching skills will be ranked by proficiency.') }}
+                            </p>
+                            @foreach ($skillsInput as $index => $skill)
                                 <div class="mt-3 flex flex-wrap gap-3 items-end p-3 rounded-lg border border-gray-200 bg-gray-50/50">
                                     <div class="flex-1 min-w-[140px]">
-                                        <input type="text" x-model="skill.skill_name" :name="'required_skills[' + index + '][skill_name]'" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm" placeholder="{{ __('Skill name') }}" />
+                                        <input type="text" name="required_skills[{{ $index }}][skill_name]" value="{{ $skill['skill_name'] ?? '' }}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm" placeholder="{{ __('Skill name') }}" />
                                     </div>
                                     <div class="w-24">
-                                        <input type="number" x-model.number="skill.weight" :name="'required_skills[' + index + '][weight]'" min="1" max="10" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm" placeholder="{{ __('Weight') }}" title="{{ __('1–10') }}" />
+                                        <input
+                                            type="number"
+                                            name="required_skills[{{ $index }}][weight]"
+                                            value="{{ $skill['weight'] ?? 1 }}"
+                                            min="1"
+                                            max="3"
+                                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
+                                            placeholder="{{ __('1–3') }}"
+                                            title="{{ __('1 = not important, 2 = important, 3 = very important') }}"
+                                        />
                                     </div>
                                     <div class="w-28">
-                                        <input type="number" x-model.number="skill.min_proficiency" :name="'required_skills[' + index + '][min_proficiency]'" min="0" max="100" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm" placeholder="{{ __('Min %') }}" title="{{ __('Optional min proficiency %') }}" />
+                                        <input type="number" name="required_skills[{{ $index }}][min_proficiency]" value="{{ $skill['min_proficiency'] ?? '' }}" min="0" max="100" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm" placeholder="{{ __('Min %') }}" title="{{ __('Optional min proficiency %') }}" />
                                     </div>
-                                    <button type="button" @click="removeSkill(index)" class="p-2 text-red-600 hover:bg-red-50 rounded-md">
-                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                                    </button>
                                 </div>
-                            </template>
-                            <button type="button" @click="addSkill()" class="mt-3 text-sm font-medium text-indigo-600 hover:text-indigo-900">
-                                + {{ __('Add required skill') }}
-                            </button>
+                            @endforeach
+                            <p class="mt-2 text-xs text-gray-500">{{ __('Up to 5 skills can be entered.') }}</p>
                         </div>
 
                         <div class="space-y-4" x-data="{ salaryType: '{{ old('salary_type', 'salary_range') }}' }">

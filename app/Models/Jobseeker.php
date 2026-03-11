@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Jobseeker extends Model
@@ -75,5 +76,22 @@ class Jobseeker extends Model
     public function getFullNameAttribute()
     {
         return trim(($this->first_name ?? '') . ' ' . ($this->middle_name ?? '') . ' ' . ($this->last_name ?? ''));
+    }
+
+    public function jobMatches(): HasMany
+    {
+        return $this->hasMany(JobMatch::class)->orderByDesc('final_score');
+    }
+
+    public function virtualEventRegistrations()
+    {
+        return $this->hasMany(VirtualEventRegistration::class);
+    }
+
+    public function registeredVirtualEvents()
+    {
+        return $this->belongsToMany(VirtualEvent::class, 'virtual_event_registrations')
+            ->withPivot('registered_at')
+            ->withTimestamps();
     }
 }

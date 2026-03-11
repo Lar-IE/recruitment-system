@@ -4,9 +4,18 @@
     $user = $jobseeker->user;
     $age = $jobseeker->birth_date?->age;
     $firstEducation = $jobseeker->educations->first();
-    $educationSummary = $firstEducation 
-        ? ($firstEducation->degree ? $firstEducation->degree . ' - ' : '') . $firstEducation->institution
-        : '';
+    $educationPrimaryLine = '';
+    $educationSchoolLine = '';
+    if ($firstEducation) {
+        $educationPrimaryLine = trim(implode(' in ', array_filter([
+            $firstEducation->degree,
+            $firstEducation->field_of_study,
+        ])));
+        if ($educationPrimaryLine === '') {
+            $educationPrimaryLine = $firstEducation->field_of_study ?: ($firstEducation->degree ?: '');
+        }
+        $educationSchoolLine = (string) ($firstEducation->institution ?? '');
+    }
 @endphp
 <x-app-layout>
     <x-slot name="header">
@@ -15,7 +24,7 @@
                 {{ __('Jobseeker Profile') }}
             </h2>
             <a href="{{ route('employer.jobseekers.index') }}" class="text-sm text-gray-600 hover:text-gray-900">
-                {{ __('Back to Directory') }}
+                {{ __('Back to Jobseeker Directory') }}
             </a>
         </div>
     </x-slot>
@@ -54,7 +63,12 @@
                         </div>
                         <div>
                             <p class="text-xs font-bold text-gray-800">{{ __('Education Details') }}</p>
-                            <p>{{ $educationSummary ?: '-' }}</p>
+                            @if ($educationPrimaryLine !== '' || $educationSchoolLine !== '')
+                                <p>{{ $educationPrimaryLine !== '' ? $educationPrimaryLine : '-' }}</p>
+                                <p class="text-xs text-gray-500">{{ $educationSchoolLine !== '' ? $educationSchoolLine : '-' }}</p>
+                            @else
+                                <p>-</p>
+                            @endif
                         </div>
                         <div>
                             <p class="text-xs font-bold text-gray-800">{{ __('Gender') }}</p>
